@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 
 
@@ -15,7 +15,8 @@ class UserBase(BaseModel):
     full_name: str
     role: str
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """
         Validate username requirements.
@@ -37,9 +38,9 @@ class UserBase(BaseModel):
             raise ValueError(
                 "Username can only contain letters, numbers, underscores, and hyphens"
             )
-        return v.lower().strip()
-
-    @validator("role")
+        return v.lower().strip()    
+    @field_validator("role")
+    @classmethod
     def validate_role(cls, v):
         """
         Validate that the role is one of the allowed values.
@@ -53,12 +54,12 @@ class UserBase(BaseModel):
         Raises:
             ValueError: If role is not in allowed list
         """
-        allowed_roles = ["admin", "user", "guest", "doctor", "nurse", "staff"]
+        allowed_roles = ["admin", "user"]
         if v.lower() not in allowed_roles:
             raise ValueError(f"Role must be one of: {', '.join(allowed_roles)}")
-        return v.lower()
-
-    @validator("full_name")
+        return v.lower()    
+    @field_validator("full_name")
+    @classmethod
     def validate_full_name(cls, v):
         """
         Validate full name requirements.
@@ -92,13 +93,13 @@ class UserCreate(UserBase):
             email="john@example.com",
             password="secure_password123",
             full_name="John Doe",
-            role="user"
-        )
+            role="user"        )
     """
 
     password: str
 
-    @validator("password")
+    @field_validator("password")
+    @classmethod
     def validate_password(cls, v):
         """
         Validate password requirements.
@@ -145,7 +146,8 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[str] = None
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username if provided."""
         if v is not None:
@@ -158,19 +160,18 @@ class UserUpdate(BaseModel):
                     "Username can only contain letters, numbers, underscores, and hyphens"
                 )
             return v.lower().strip()
-        return v
-
-    @validator("role")
+        return v    @field_validator("role")
+    @classmethod
     def validate_role(cls, v):
         """Validate role if provided."""
         if v is not None:
-            allowed_roles = ["admin", "user", "guest", "doctor", "nurse", "staff"]
+            allowed_roles = ["admin", "user"]
             if v.lower() not in allowed_roles:
                 raise ValueError(f"Role must be one of: {', '.join(allowed_roles)}")
             return v.lower()
         return v
 
-    @validator("full_name")
+    @field_validator("full_name")
     def validate_full_name(cls, v):
         """Validate full name if provided."""
         if v is not None:
@@ -229,7 +230,8 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Clean username for login."""
         return v.lower().strip() if v else v
@@ -251,7 +253,8 @@ class UserChangePassword(BaseModel):
     current_password: str
     new_password: str
 
-    @validator("new_password")
+    @field_validator("new_password")
+    @classmethod
     def validate_new_password(cls, v):
         """Validate the new password using same rules as UserCreate."""
         if len(v) < 6:
