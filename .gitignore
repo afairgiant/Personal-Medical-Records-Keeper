@@ -132,3 +132,4 @@ frontend/coverage
 
 .claude/
 .claude/settings.local.json
+CLAUDE.md

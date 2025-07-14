@@ -14,7 +14,9 @@ import {
   Anchor,
   Checkbox,
   Divider,
+  Alert,
 } from '@mantine/core';
+import { IconAlertTriangle } from '@tabler/icons-react';
 import { DateInput } from '@mantine/dates';
 import { useFormHandlers } from '../../hooks/useFormHandlers';
 
@@ -50,6 +52,9 @@ const BaseMedicalForm = ({
   // Form state
   editingItem = null,
   isLoading = false,
+  
+  // Error handling
+  fieldErrors = {},
   
   // Custom content
   children,
@@ -129,7 +134,19 @@ const BaseMedicalForm = ({
     const isFieldLoading = dynamicOptionsKey && loadingStates[dynamicOptionsKey];
 
 
-    // Base field props
+    // Base field props with smart error handling
+    // Integrates our custom validation errors with Mantine's built-in error display
+    // without conflicting with HTML5 validation or Mantine's own validation
+    const customError = fieldErrors[name] || null;
+    
+    // Don't override HTML5 email validation with generic messages
+    // This prevents showing confusing duplicate error messages
+    const shouldShowCustomError = customError && !(
+      type === 'email' && 
+      customError.includes('valid') && 
+      !customError.includes('required')
+    );
+    
     const baseProps = {
       label,
       placeholder,
@@ -138,6 +155,7 @@ const BaseMedicalForm = ({
       withAsterisk: required,
       value: formData[name] || '',
       maxLength,
+      error: shouldShowCustomError ? customError : null,
     };
 
     switch (type) {
@@ -178,13 +196,19 @@ const BaseMedicalForm = ({
         );
 
       case 'number':
+        // NumberInput needs special value handling
+        const numberValue = formData[name] !== undefined && formData[name] !== null && formData[name] !== '' ? Number(formData[name]) : '';
         return (
           <NumberInput
-            {...baseProps}
+            label={label}
+            placeholder={placeholder}
+            description={description}
+            required={required}
+            withAsterisk={required}
+            error={shouldShowCustomError ? customError : null}
+            maxLength={maxLength}
+            value={numberValue}
             onChange={handleNumberChange(name)}
-
-            value={formData[name] !== undefined && formData[name] !== null && formData[name] !== '' ? Number(formData[name]) : ''}
-
             min={min}
             max={max}
           />
@@ -245,10 +269,19 @@ const BaseMedicalForm = ({
         );
 
       case 'rating':
+        const hasRatingError = shouldShowCustomError ? customError : null;
         return (
           <div>
-            <Text size="sm" fw={500} style={{ marginBottom: '8px' }}>
+            <Text 
+              size="sm" 
+              fw={500} 
+              style={{ 
+                marginBottom: '8px',
+                color: hasRatingError ? 'var(--mantine-color-error)' : undefined 
+              }}
+            >
               {label}
+              {required && <span style={{ color: 'var(--mantine-color-error)' }}> *</span>}
             </Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Rating
@@ -266,6 +299,11 @@ const BaseMedicalForm = ({
                 {description}
               </Text>
             )}
+            {hasRatingError && (
+              <Text size="xs" c="red" style={{ marginTop: '4px' }}>
+                {hasRatingError}
+              </Text>
+            )}
           </div>
         );
 
@@ -276,6 +314,7 @@ const BaseMedicalForm = ({
             description={description}
             checked={!!formData[name]}
             onChange={handleCheckboxChange(name)}
+            error={shouldShowCustomError ? customError : null}
           />
         );
 

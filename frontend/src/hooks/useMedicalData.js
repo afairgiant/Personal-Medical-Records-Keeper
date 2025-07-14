@@ -32,7 +32,7 @@ export const useMedicalData = config => {
     }
   }, [currentPatient?.id]);
 
-  const { loading, error, execute, clearError, setError, cleanup } = useApi();
+  const { loading, error, lastErrorObject, execute, clearError, setError, cleanup } = useApi();
 
   // Create item
   const createItem = useCallback(
@@ -293,6 +293,7 @@ export const useMedicalData = config => {
     // State
     loading: loading || patientLoading, // Combine API loading and patient loading
     error,
+    lastErrorObject,
     successMessage,
 
     // Actions

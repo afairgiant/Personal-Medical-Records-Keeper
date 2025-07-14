@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastErrorObject, setLastErrorObject] = useState(null);
   const abortControllerRef = useRef(null);
 
   const execute = useCallback(async (apiCall, options = {}) => {
@@ -18,6 +19,7 @@ export const useApi = () => {
     try {
       setLoading(true);
       setError(null);
+      setLastErrorObject(null);
 
       const result = await apiCall(controller.signal);
 
@@ -33,6 +35,7 @@ export const useApi = () => {
         const errorMessage =
           options.errorMessage || err.message || 'An error occurred';
         setError(errorMessage);
+        setLastErrorObject(err); // Store the original error object
         console.error('API Error:', err);
       }
       return null;
@@ -45,6 +48,7 @@ export const useApi = () => {
 
   const clearError = useCallback(() => {
     setError(null);
+    setLastErrorObject(null);
   }, []);
 
   const setErrorMessage = useCallback(message => {
@@ -60,6 +64,7 @@ export const useApi = () => {
   return {
     loading,
     error,
+    lastErrorObject,
     execute,
     clearError,
     setError: setErrorMessage,

@@ -8,6 +8,7 @@ import { getMedicalPageConfig } from '../../utils/medicalPageConfigs';
 import { usePatientWithStaticData } from '../../hooks/useGlobalData';
 import { getEntityFormatters } from '../../utils/tableFormatters';
 import { navigateToEntity } from '../../utils/linkNavigation';
+import { useFormErrorHandling } from '../../hooks/useFormErrorHandling';
 import { PageHeader } from '../../components';
 import { Button } from '../../components/ui';
 import logger from '../../services/logger';
@@ -60,6 +61,7 @@ const FamilyHistory = () => {
     currentPatient,
     loading,
     error,
+    lastErrorObject,
     successMessage,
     createItem,
     updateItem,
@@ -134,6 +136,14 @@ const FamilyHistory = () => {
     is_deceased: false,
     notes: '',
   });
+  
+  // Enhanced error handling
+  const { 
+    fieldErrors, 
+    clearFieldErrors, 
+    handleSubmissionError, 
+    createChangeHandler 
+  } = useFormErrorHandling('FamilyHistory');
 
   // Family condition state
   const [showConditionModal, setShowConditionModal] = useState(false);
@@ -149,13 +159,13 @@ const FamilyHistory = () => {
     notes: '',
   });
 
-  const handleInputChange = e => {
+  const handleInputChange = createChangeHandler((e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-  };
+  });
 
   const handleConditionInputChange = e => {
     const { name, value, type, checked } = e.target;
@@ -175,6 +185,7 @@ const FamilyHistory = () => {
       is_deceased: false,
       notes: '',
     });
+    clearFieldErrors();
     setEditingMember(null);
     setShowModal(false);
   };
@@ -228,6 +239,10 @@ const FamilyHistory = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
+    
+    // Clear previous errors
+    clearFieldErrors();
+    clearError();
 
     if (!currentPatient?.id) {
       setError('Patient information not available');
@@ -259,8 +274,17 @@ const FamilyHistory = () => {
     }
 
     if (success) {
+      logger.debug('Family member submission successful', {
+        action: editingMember ? 'update' : 'create',
+        familyMemberId: editingMember?.id,
+        component: 'FamilyHistory',
+      });
       setShowModal(false);
       await refreshData();
+    } else {
+      // Use centralized error handling
+      const errorToHandle = lastErrorObject || { message: error };
+      handleSubmissionError(errorToHandle, memberData, setError);
     }
   };
 
@@ -990,6 +1014,7 @@ const FamilyHistory = () => {
         onInputChange={handleInputChange}
         onSubmit={handleSubmit}
         editingMember={editingMember}
+        fieldErrors={fieldErrors}
       />
 
       {/* Family Condition Form Modal */}
