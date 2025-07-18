@@ -144,3 +144,9 @@ http://localhost:8005
 
 - Username: `admin`
 - Password: `admin123`
+
+## Backup and Restore
+The app can be backed up using the Admin Dashboard. 
+Additionally, a backup/restore CLI is available.
+This can be used with cron to automate scheduled backups. 
+See [Backup and Restore CLI](app/scripts/README_BACKUP_CLI.md) for more details.
