@@ -26,8 +26,8 @@ def create_sample_medication(db: Session, patient: Patient) -> dict:
         "name": random.choice(medication_names),
         "dosage": random.choice(dosages),
         "frequency": random.choice(frequencies),
-        "start_date": (date.today() - timedelta(days=random.randint(1, 365))).isoformat(),
-        "end_date": None if random.random() > 0.3 else (date.today() + timedelta(days=random.randint(1, 180))).isoformat(),
+        "start_date": date.today() - timedelta(days=random.randint(1, 365)),
+        "end_date": None if random.random() > 0.3 else date.today() + timedelta(days=random.randint(1, 180)),
         "prescribing_doctor": f"Dr. {random.choice(['Smith', 'Johnson', 'Williams', 'Brown'])}",
         "notes": f"Prescribed for test condition {random.randint(1, 100)}",
         "status": random.choice(["active", "inactive", "discontinued"])
@@ -50,7 +50,7 @@ def create_sample_lab_result(db: Session, patient: Patient) -> dict:
     data = {
         "patient_id": patient.id,
         "test_name": random.choice(test_names),
-        "test_date": (date.today() - timedelta(days=random.randint(1, 365))).isoformat(),
+        "test_date": date.today() - timedelta(days=random.randint(1, 365)),
         "result": random.choice(results),
         "reference_range": "Within normal limits",
         "ordering_doctor": f"Dr. {random.choice(['Smith', 'Johnson', 'Williams', 'Brown'])}",
@@ -88,7 +88,7 @@ def create_sample_vitals(db: Session, patient: Patient) -> dict:
     """Create a sample vitals record."""
     data = {
         "patient_id": patient.id,
-        "measurement_date": (date.today() - timedelta(days=random.randint(1, 30))).isoformat(),
+        "measurement_date": date.today() - timedelta(days=random.randint(1, 30)),
         "systolic_bp": random.randint(110, 140),
         "diastolic_bp": random.randint(70, 90),
         "heart_rate": random.randint(60, 100),
@@ -132,7 +132,7 @@ def create_test_condition_data() -> Dict[str, Any]:
     return {
         "name": random.choice(conditions),
         "description": f"Test condition description {random.randint(1, 100)}",
-        "diagnosis_date": (date.today() - timedelta(days=random.randint(1, 1000))).isoformat(),
+        "diagnosis_date": date.today() - timedelta(days=random.randint(1, 1000)),
         "status": random.choice(statuses),
         "severity": random.choice(severities),
         "notes": f"Condition notes {random.randint(1, 100)}"
@@ -157,7 +157,7 @@ def create_test_allergy_data() -> Dict[str, Any]:
         "allergen": random.choice(allergens),
         "reaction": random.choice(reactions),
         "severity": random.choice(severities),
-        "onset_date": (date.today() - timedelta(days=random.randint(1, 1000))).isoformat(),
+        "onset_date": date.today() - timedelta(days=random.randint(1, 1000)),
         "notes": f"Allergy notes {random.randint(1, 100)}",
         "status": "active"
     }
@@ -172,7 +172,7 @@ def create_test_immunization_data() -> Dict[str, Any]:
     
     return {
         "vaccine_name": random.choice(vaccines),
-        "vaccination_date": (date.today() - timedelta(days=random.randint(1, 365))).isoformat(),
+        "vaccination_date": date.today() - timedelta(days=random.randint(1, 365)),
         "dose_number": random.randint(1, 3),
         "lot_number": f"LOT{random.randint(1000, 9999)}",
         "administered_by": f"Dr. {random.choice(['Smith', 'Johnson', 'Williams'])}",

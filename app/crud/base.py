@@ -468,17 +468,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], QueryMixi
         """Create a new record with simplified error handling."""
         # Handle different input types with proper JSON serialization
         if isinstance(obj_in, dict):
-            # Plain dictionary - use jsonable_encoder for robust serialization
-            obj_in_data = jsonable_encoder(obj_in)
+            # Plain dictionary - use as-is to preserve Python types for database
+            obj_in_data = obj_in.copy()
         elif hasattr(obj_in, "model_dump"):
-            # Pydantic v2 model
-            obj_in_data = jsonable_encoder(obj_in.model_dump())  # type: ignore
+            # Pydantic v2 model - preserve Python types for database
+            obj_in_data = obj_in.model_dump()  # type: ignore
         elif hasattr(obj_in, "dict"):
-            # Pydantic v1 model
-            obj_in_data = jsonable_encoder(obj_in.dict())  # type: ignore
+            # Pydantic v1 model - preserve Python types for database  
+            obj_in_data = obj_in.dict()  # type: ignore
         else:
-            # Fallback for other types
-            obj_in_data = jsonable_encoder(obj_in)
+            # Fallback - try to convert to dict preserving types
+            obj_in_data = dict(obj_in) if hasattr(obj_in, '__iter__') else {}
 
         self.logger.info(f"Creating new {self.model_name} record")
 
@@ -590,17 +590,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], QueryMixi
 
         # Handle different input types with proper JSON serialization
         if isinstance(obj_in, dict):
-            # Plain dictionary - use jsonable_encoder for robust serialization
-            update_data = jsonable_encoder(obj_in)
+            # Plain dictionary - use as-is to preserve Python types for database
+            update_data = obj_in.copy()
         elif hasattr(obj_in, "model_dump"):
-            # Pydantic v2 model
-            update_data = jsonable_encoder(obj_in.model_dump(exclude_unset=True))  # type: ignore
+            # Pydantic v2 model - preserve Python types for database
+            update_data = obj_in.model_dump(exclude_unset=True)  # type: ignore
         elif hasattr(obj_in, "dict"):
-            # Pydantic v1 model
-            update_data = jsonable_encoder(obj_in.dict(exclude_unset=True))  # type: ignore
+            # Pydantic v1 model - preserve Python types for database
+            update_data = obj_in.dict(exclude_unset=True)  # type: ignore
         else:
-            # Fallback for other types
-            update_data = jsonable_encoder(obj_in)
+            # Fallback - try to convert to dict preserving types
+            update_data = dict(obj_in) if hasattr(obj_in, '__iter__') else {}
 
         self.logger.info(f"Updating {self.model_name} record {record_id}")
 

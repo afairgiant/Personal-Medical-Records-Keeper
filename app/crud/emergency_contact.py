@@ -119,6 +119,7 @@ class CRUDEmergencyContact(
     ) -> List[EmergencyContact]:
         """
         Get all active emergency contacts for a patient.
+        Ordered by primary contact first, then by name.
 
         Args:
             db: Database session
@@ -127,10 +128,14 @@ class CRUDEmergencyContact(
         Returns:
             List of active emergency contacts
         """
-        return self.query(
-            db=db,
-            filters={"patient_id": patient_id, "is_active": True},
-            order_by=[("-is_primary", "name")],
+        from sqlalchemy import desc, asc
+        
+        return (
+            db.query(EmergencyContact)
+            .filter(EmergencyContact.patient_id == patient_id)
+            .filter(EmergencyContact.is_active == True)
+            .order_by(desc(EmergencyContact.is_primary), asc(EmergencyContact.name))
+            .all()
         )
 
 

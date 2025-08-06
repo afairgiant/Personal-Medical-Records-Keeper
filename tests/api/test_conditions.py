@@ -51,7 +51,7 @@ class TestConditionAPI:
             "diagnosis": "Essential Hypertension",
             "status": "active",
             "severity": "moderate",
-            "onset_date": "2024-01-15",
+            "onset_date": date(2024, 1, 15),
             "icd10_code": "I10",
             "snomed_code": "38341003",
             "code_description": "Essential hypertension",
@@ -165,7 +165,7 @@ class TestConditionAPI:
             "status": "inactive",
             "severity": "mild",
             "notes": "Patient responded well to treatment",
-            "end_date": "2024-02-15"
+            "end_date": date(2024, 2, 15)
         }
         
         response = authenticated_client.put(f"/api/v1/conditions/{condition['id']}", json=update_data)

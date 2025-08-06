@@ -42,7 +42,7 @@ class TestMedicationAPI:
             "dosage": "100mg",
             "frequency": "once daily",
             "route": "oral",
-            "effective_period_start": "2024-01-01",
+            "effective_period_start": date(2024, 1, 1),
             "status": "active",
             "indication": "Pain relief"
         }
@@ -363,8 +363,8 @@ class TestMedicationAPI:
             "medication_name": "Aspirin",
             "dosage": "100mg",
             "frequency": "once daily",
-            "effective_period_start": "2024-01-01",
-            "effective_period_end": "2024-12-31",
+            "effective_period_start": date(2024, 1, 1),
+            "effective_period_end": date(2024, 12, 31),
             "status": "active"
         }
 

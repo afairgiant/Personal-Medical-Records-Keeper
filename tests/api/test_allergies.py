@@ -41,7 +41,7 @@ class TestAllergiesAPI:
             "allergen": "Penicillin",
             "severity": "severe",
             "reaction": "Anaphylaxis, difficulty breathing, hives",
-            "onset_date": "2023-05-15",
+            "onset_date": date(2023, 5, 15),
             "status": "active",
             "notes": "Confirmed by allergist Dr. Smith",
             "treatment": "Epinephrine auto-injector prescribed"
@@ -67,7 +67,7 @@ class TestAllergiesAPI:
             "allergen": "Peanuts",
             "severity": "life-threatening",
             "reaction": "Severe anaphylaxis within minutes",
-            "onset_date": "2020-03-10",
+            "onset_date": date(2020, 3, 10),
             "status": "active",
             "notes": "Patient carries EpiPen at all times",
             "verified_by": "Emergency Department - City Hospital"
@@ -93,21 +93,21 @@ class TestAllergiesAPI:
                 "allergen": "Penicillin",
                 "severity": "severe",
                 "reaction": "Rash, swelling",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Shellfish",
                 "severity": "moderate",
                 "reaction": "Hives, stomach upset",
-                "onset_date": "2022-08-20",
+                "onset_date": date(2022, 8, 20),
                 "status": "active"
             },
             {
                 "allergen": "Latex",
                 "severity": "mild",
                 "reaction": "Contact dermatitis",
-                "onset_date": "2021-06-10",
+                "onset_date": date(2021, 6, 10),
                 "status": "inactive"
             }
         ]
@@ -140,14 +140,14 @@ class TestAllergiesAPI:
                 "allergen": "Active Allergen",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Inactive Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": "2022-01-15",
+                "onset_date": date(2022, 1, 15),
                 "status": "inactive"
             }
         ]
@@ -182,21 +182,21 @@ class TestAllergiesAPI:
                 "allergen": "Life Threatening Drug",
                 "severity": "life-threatening",
                 "reaction": "Anaphylaxis",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Severe Drug",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Mild Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             }
         ]
@@ -236,7 +236,7 @@ class TestAllergiesAPI:
             "allergen": "Sulfa Drugs",
             "severity": "moderate",
             "reaction": "Skin rash, nausea",
-            "onset_date": "2023-01-15",
+            "onset_date": date(2023, 1, 15),
             "status": "active",
             "notes": "Reaction occurred during antibiotic treatment"
         }
@@ -268,7 +268,7 @@ class TestAllergiesAPI:
             "allergen": "Iodine",
             "severity": "moderate",
             "reaction": "Rash",
-            "onset_date": "2023-01-15",
+            "onset_date": date(2023, 1, 15),
             "status": "active"
         }
 
@@ -308,7 +308,7 @@ class TestAllergiesAPI:
             "allergen": "Temporary Allergen",
             "severity": "mild",
             "reaction": "Mild rash",
-            "onset_date": "2023-01-15",
+            "onset_date": date(2023, 1, 15),
             "status": "active"
         }
 
@@ -343,7 +343,7 @@ class TestAllergiesAPI:
             "allergen": "Test Allergen to Delete",
             "severity": "mild",
             "reaction": "Test reaction",
-            "onset_date": "2023-01-15",
+            "onset_date": date(2023, 1, 15),
             "status": "active"
         }
 
@@ -378,21 +378,21 @@ class TestAllergiesAPI:
                 "allergen": "Penicillin G",
                 "severity": "severe",
                 "reaction": "Anaphylaxis",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Amoxicillin",
                 "severity": "moderate",
                 "reaction": "Rash",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Shellfish",
                 "severity": "mild",
                 "reaction": "Stomach upset",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             }
         ]
@@ -453,7 +453,7 @@ class TestAllergiesAPI:
             "allergen": "Private Allergen",
             "severity": "severe",
             "reaction": "Confidential reaction",
-            "onset_date": "2023-01-15",
+            "onset_date": date(2023, 1, 15),
             "status": "active"
         }
 
@@ -552,21 +552,21 @@ class TestAllergiesAPI:
                 "allergen": "Mild Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Life Threatening Allergen",
                 "severity": "life-threatening",
                 "reaction": "Anaphylaxis",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             },
             {
                 "allergen": "Severe Allergen",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": "2023-01-15",
+                "onset_date": date(2023, 1, 15),
                 "status": "active"
             }
         ]

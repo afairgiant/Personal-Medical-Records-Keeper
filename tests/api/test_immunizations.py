@@ -43,7 +43,7 @@ class TestImmunizationsAPI:
             "lot_number": "ABC123",
             "dose_number": 1,
             "dose_quantity": "0.3 mL",
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "administration_site": "left deltoid",
             "route": "intramuscular",
             "administering_provider": "Dr. Smith",
@@ -74,7 +74,7 @@ class TestImmunizationsAPI:
             "lot_number": "MOD456",
             "dose_number": 3,
             "dose_quantity": "0.5 mL",
-            "administration_date": "2024-03-15",
+            "administration_date": date(2024, 3, 15),
             "administration_site": "right deltoid",
             "route": "intramuscular",
             "administering_provider": "Dr. Johnson",
@@ -105,7 +105,7 @@ class TestImmunizationsAPI:
             "lot_number": "DTaP789",
             "dose_number": 1,
             "dose_quantity": "0.5 mL",
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "administration_site": "left thigh",
             "route": "intramuscular",
             "administering_provider": "Dr. Pediatric",
@@ -135,21 +135,21 @@ class TestImmunizationsAPI:
                 "vaccine_name": "COVID-19 mRNA Vaccine",
                 "manufacturer": "Pfizer-BioNTech",
                 "dose_number": 1,
-                "administration_date": "2024-01-15",
+                "administration_date": date(2024, 1, 15),
                 "administering_provider": "Dr. Smith"
             },
             {
                 "vaccine_name": "Influenza Vaccine",
                 "manufacturer": "Sanofi",
                 "dose_number": 1,
-                "administration_date": "2024-02-01",
+                "administration_date": date(2024, 2, 1),
                 "administering_provider": "Dr. Johnson"
             },
             {
                 "vaccine_name": "Tdap",
                 "manufacturer": "GlaxoSmithKline",
                 "dose_number": 1,
-                "administration_date": "2024-02-15",
+                "administration_date": date(2024, 2, 15),
                 "administering_provider": "Dr. Brown"
             }
         ]
@@ -182,7 +182,7 @@ class TestImmunizationsAPI:
             "lot_number": "HepB123",
             "dose_number": 1,
             "dose_quantity": "1.0 mL",
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "administration_site": "left deltoid",
             "route": "intramuscular",
             "administering_provider": "Dr. Hepatitis",
@@ -216,7 +216,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "COVID-19 mRNA Vaccine",
             "manufacturer": "Pfizer-BioNTech",
             "dose_number": 1,
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "series_complete": False
         }
 
@@ -258,7 +258,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "Hepatitis B Vaccine",
             "manufacturer": "Merck",
             "dose_number": 2,
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "series_complete": False
         }
 
@@ -295,7 +295,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "Test Vaccine to Delete",
             "manufacturer": "Test Manufacturer",
             "dose_number": 1,
-            "administration_date": "2024-01-15"
+            "administration_date": date(2024, 1, 15)
         }
 
         create_response = client.post(
@@ -329,19 +329,19 @@ class TestImmunizationsAPI:
                 "vaccine_name": "COVID-19 mRNA Vaccine",
                 "manufacturer": "Pfizer-BioNTech",
                 "dose_number": 1,
-                "administration_date": "2024-01-15"
+                "administration_date": date(2024, 1, 15)
             },
             {
                 "vaccine_name": "COVID-19 mRNA Vaccine",
                 "manufacturer": "Moderna",
                 "dose_number": 2,
-                "administration_date": "2024-02-15"
+                "administration_date": date(2024, 2, 15)
             },
             {
                 "vaccine_name": "Influenza Vaccine",
                 "manufacturer": "Sanofi",
                 "dose_number": 1,
-                "administration_date": "2024-03-15"
+                "administration_date": date(2024, 3, 15)
             }
         ]
 
@@ -468,7 +468,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "Private Vaccine",
             "manufacturer": "Private Manufacturer",
             "dose_number": 1,
-            "administration_date": "2024-01-15"
+            "administration_date": date(2024, 1, 15)
         }
 
         create_response = client.post(
@@ -532,7 +532,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "Test Vaccine",
             "manufacturer": "Test Manufacturer",
             "dose_number": 0,  # Invalid dose number
-            "administration_date": "2024-01-15"
+            "administration_date": date(2024, 1, 15)
         }
 
         response = client.post(
@@ -548,7 +548,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "Test Vaccine",
             "manufacturer": "Test Manufacturer",
             "dose_number": 1,
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "route": "invalid_route"
         }
 
@@ -569,7 +569,7 @@ class TestImmunizationsAPI:
             "lot_number": "ABC123",
             "dose_number": 1,
             "dose_quantity": "0.3 mL",
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "administration_site": "left deltoid",
             "route": "intramuscular",
             "administering_provider": "Dr. First",
@@ -593,7 +593,7 @@ class TestImmunizationsAPI:
             "lot_number": "ABC456",
             "dose_number": 2,
             "dose_quantity": "0.3 mL",
-            "administration_date": "2024-02-15",
+            "administration_date": date(2024, 2, 15),
             "administration_site": "right deltoid",
             "route": "intramuscular",
             "administering_provider": "Dr. Second",
@@ -631,7 +631,7 @@ class TestImmunizationsAPI:
             "vaccine_name": "COVID-19 mRNA Vaccine",
             "manufacturer": "Pfizer-BioNTech",
             "dose_number": 1,
-            "administration_date": "2024-01-15",
+            "administration_date": date(2024, 1, 15),
             "administering_provider": "Dr. Safety",
             "adverse_reactions": "Mild soreness at injection site, resolved within 24 hours",
             "notes": "Patient reported minor side effects, no serious adverse events"
