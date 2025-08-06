@@ -11,6 +11,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.vitals import vitals
 from app.models.activity_log import EntityType
@@ -18,7 +19,19 @@ from app.schemas.vitals import VitalsCreate, VitalsResponse, VitalsStats, Vitals
 
 router = APIRouter()
 
+# Add standard CRUD endpoints
+add_standard_endpoints(
+    router,
+    crud_obj=vitals,
+    entity_type=EntityType.VITALS,
+    entity_name="Vitals",
+    create_schema=VitalsCreate,
+    update_schema=VitalsUpdate,
+    response_schema=VitalsResponse,
+    response_with_relations_schema=VitalsResponse,  # No separate with_relations schema
+)
 
+# Override the standard create endpoint to use BMI calculation
 @router.post("/", response_model=VitalsResponse)
 def create_vitals(
     *,
@@ -36,7 +49,7 @@ def create_vitals(
 
     log_create(
         db=db,
-        entity_type="vitals",
+        entity_type=EntityType.VITALS,
         entity_obj=vitals_obj,
         user_id=current_user_id,
         request=request,
@@ -44,58 +57,7 @@ def create_vitals(
 
     return vitals_obj
 
-
-@router.get("/", response_model=List[VitalsResponse])
-def read_vitals(
-    *,
-    db: Session = Depends(deps.get_db),
-    skip: int = 0,
-    limit: int = Query(default=100, le=100),
-    target_patient_id: int = Depends(deps.get_accessible_patient_id),
-) -> Any:
-    """Retrieve vitals readings for the current user or specified patient (Phase 1 support)."""
-    
-    vitals_list = vitals.get_by_patient(
-        db=db, patient_id=target_patient_id, skip=skip, limit=limit
-    )
-    return vitals_list
-
-
-@router.get("/stats", response_model=VitalsStats)
-def read_current_user_vitals_stats(
-    *,
-    db: Session = Depends(deps.get_db),
-    patient_id: Optional[int] = Query(None, description="Patient ID for Phase 1 patient switching"),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Get vitals statistics for the current user or specified patient (Phase 1 support)."""
-    
-    # Phase 1 support: Use patient_id if provided, otherwise fall back to user's own patient
-    if patient_id is not None:
-        target_patient_id = patient_id
-    else:
-        target_patient_id = deps.get_current_user_patient_id(db, current_user_id)
-    
-    stats = vitals.get_vitals_stats(db=db, patient_id=target_patient_id)
-    return stats
-
-
-@router.get("/{vitals_id}", response_model=VitalsResponse)
-def read_vitals_by_id(
-    *,
-    db: Session = Depends(deps.get_db),
-    vitals_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Get vitals reading by ID with related information - only allows access to user's own vitals."""
-    vitals_obj = vitals.get_with_relations(
-        db=db, record_id=vitals_id, relations=["patient", "practitioner"]
-    )
-    handle_not_found(vitals_obj, "Vitals reading")
-    verify_patient_ownership(vitals_obj, current_user_patient_id, "vitals")
-    return vitals_obj
-
-
+# Override the standard update endpoint to handle BMI recalculation
 @router.put("/{vitals_id}", response_model=VitalsResponse)
 def update_vitals(
     *,
@@ -127,7 +89,7 @@ def update_vitals(
 
     log_update(
         db=db,
-        entity_type="vitals",
+        entity_type=EntityType.VITALS,
         entity_obj=updated_vitals,
         user_id=current_user_id,
         request=request,
@@ -135,32 +97,40 @@ def update_vitals(
 
     return updated_vitals
 
-
-@router.delete("/{vitals_id}")
-def delete_vitals(
+# Override the standard get endpoint to include practitioner relations
+@router.get("/{vitals_id}", response_model=VitalsResponse)
+def read_vitals_by_id(
     *,
-    vitals_id: int,
-    request: Request,
     db: Session = Depends(deps.get_db),
+    vitals_id: int,
+    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+) -> Any:
+    """Get vitals reading by ID with related information - only allows access to user's own vitals."""
+    vitals_obj = vitals.get_with_relations(
+        db=db, record_id=vitals_id, relations=["patient", "practitioner"]
+    )
+    handle_not_found(vitals_obj, "Vitals reading")
+    verify_patient_ownership(vitals_obj, current_user_patient_id, "vitals")
+    return vitals_obj
+
+# Custom stats endpoint (preserve existing functionality)
+@router.get("/stats", response_model=VitalsStats)
+def read_current_user_vitals_stats(
+    *,
+    db: Session = Depends(deps.get_db),
+    patient_id: Optional[int] = Query(None, description="Patient ID for Phase 1 patient switching"),
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Delete a vitals reading."""
-    vitals_obj = vitals.get(db=db, id=vitals_id)
-    handle_not_found(vitals_obj, "Vitals reading")
-
-    # Log the deletion activity BEFORE deleting
-    from app.api.activity_logging import log_delete
-
-    log_delete(
-        db=db,
-        entity_type="vitals",
-        entity_obj=vitals_obj,
-        user_id=current_user_id,
-        request=request,
-    )
-
-    vitals.delete(db=db, id=vitals_id)
-    return {"message": "Vitals reading deleted successfully"}
+    """Get vitals statistics for the current user or specified patient (Phase 1 support)."""
+    
+    # Phase 1 support: Use patient_id if provided, otherwise fall back to user's own patient
+    if patient_id is not None:
+        target_patient_id = patient_id
+    else:
+        target_patient_id = deps.get_current_user_patient_id(db, current_user_id)
+    
+    stats = vitals.get_vitals_stats(db=db, patient_id=target_patient_id)
+    return stats
 
 
 @router.get("/patient/{patient_id}", response_model=List[VitalsResponse])

@@ -1,8 +1,8 @@
 from pathlib import Path
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, List
 import traceback
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Query, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, DatabaseError
 
@@ -10,6 +10,8 @@ from app.api import deps
 from app.api.activity_logging import log_create, log_delete, log_update
 from app.core.datetime_utils import get_timezone_info
 from app.core.logging_config import get_logger
+from app.crud.base import CRUDBase
+from app.models.activity_log import EntityType
 
 logger = get_logger(__name__, "app")
 
@@ -522,3 +524,110 @@ def create_sanitized_http_exception(
         status_code=status_code,
         detail=sanitized_message
     )
+
+
+def add_standard_endpoints(
+    router: APIRouter,
+    *,
+    crud_obj: CRUDBase,
+    entity_type: EntityType,
+    entity_name: str,
+    create_schema: Type,
+    update_schema: Type,
+    response_schema: Type,
+    response_with_relations_schema: Optional[Type] = None
+) -> None:
+    """
+    Add standard CRUD endpoints to an existing router.
+    
+    This preserves all existing custom endpoints while adding the standard ones:
+    - POST /     - Create entity
+    - GET /      - List entities 
+    - GET /{id}  - Get entity by ID
+    - PUT /{id}  - Update entity
+    - DELETE /{id} - Delete entity
+    
+    Args:
+        router: FastAPI router to add endpoints to
+        crud_obj: CRUD object for the entity
+        entity_type: EntityType enum value for logging
+        entity_name: Name of entity type for logging and messages
+        create_schema: Pydantic schema for creation
+        update_schema: Pydantic schema for updates
+        response_schema: Pydantic schema for responses
+        response_with_relations_schema: Optional schema for responses with relations
+    """
+    relations_schema = response_with_relations_schema or response_schema
+    
+    @router.post("/", response_model=response_schema)
+    def create_entity(
+        *,
+        request: Request,
+        db: Session = Depends(deps.get_db),
+        obj_in: create_schema,
+        current_user_id: int = Depends(deps.get_current_user_id),
+    ) -> Any:
+        """Create new entity record."""
+        return handle_create_with_logging(
+            db=db, crud_obj=crud_obj, obj_in=obj_in,
+            entity_type=entity_type, user_id=current_user_id,
+            entity_name=entity_name, request=request
+        )
+    
+    @router.get("/", response_model=List[response_schema])
+    def list_entities(
+        db: Session = Depends(deps.get_db),
+        skip: int = 0,
+        limit: int = Query(default=100, le=100),
+        target_patient_id: int = Depends(deps.get_accessible_patient_id),
+    ) -> Any:
+        """Retrieve entities for the current user or accessible patient."""
+        return crud_obj.get_by_patient(
+            db, patient_id=target_patient_id, skip=skip, limit=limit
+        )
+    
+    @router.get("/{entity_id}", response_model=relations_schema)
+    def get_entity(
+        *,
+        db: Session = Depends(deps.get_db),
+        entity_id: int,
+        current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+    ) -> Any:
+        """Get entity by ID with related information."""
+        obj = crud_obj.get_with_relations(
+            db=db, record_id=entity_id, relations=["patient"]
+        )
+        handle_not_found(obj, entity_name)
+        verify_patient_ownership(obj, current_user_patient_id, entity_name.lower())
+        return obj
+    
+    @router.put("/{entity_id}", response_model=response_schema)
+    def update_entity(
+        *,
+        request: Request,
+        db: Session = Depends(deps.get_db),
+        entity_id: int,
+        obj_in: update_schema,
+        current_user_id: int = Depends(deps.get_current_user_id),
+    ) -> Any:
+        """Update an entity record."""
+        return handle_update_with_logging(
+            db=db, crud_obj=crud_obj, entity_id=entity_id, obj_in=obj_in,
+            entity_type=entity_type, user_id=current_user_id,
+            entity_name=entity_name, request=request
+        )
+    
+    @router.delete("/{entity_id}")
+    def delete_entity(
+        *,
+        request: Request,
+        db: Session = Depends(deps.get_db),
+        entity_id: int,
+        current_user_id: int = Depends(deps.get_current_user_id),
+    ) -> Any:
+        """Delete an entity record."""
+        return handle_delete_with_logging(
+            db=db, crud_obj=crud_obj, entity_id=entity_id,
+            entity_type=entity_type, user_id=current_user_id,
+            entity_name=entity_name, request=request
+        )

@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.immunization import immunization
 from app.models.activity_log import EntityType
@@ -22,27 +23,19 @@ from app.schemas.immunization import (
 
 router = APIRouter()
 
+# Add standard CRUD endpoints  
+add_standard_endpoints(
+    router,
+    crud_obj=immunization,
+    entity_type=EntityType.IMMUNIZATION,
+    entity_name="Immunization",
+    create_schema=ImmunizationCreate,
+    update_schema=ImmunizationUpdate,
+    response_schema=ImmunizationResponse,
+    response_with_relations_schema=ImmunizationWithRelations,
+)
 
-@router.post("/", response_model=ImmunizationResponse)
-def create_immunization(
-    *,
-    immunization_in: ImmunizationCreate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Create new immunization record."""
-    return handle_create_with_logging(
-        db=db,
-        crud_obj=immunization,
-        obj_in=immunization_in,
-        entity_type=EntityType.IMMUNIZATION,
-        user_id=current_user_id,
-        entity_name="Immunization",
-        request=request,
-    )
-
-
+# Override the standard list endpoint to support custom filtering
 @router.get("/", response_model=List[ImmunizationResponse])
 def read_immunizations(
     *,
@@ -65,7 +58,7 @@ def read_immunizations(
         )
     return immunizations
 
-
+# Override the standard get endpoint to include practitioner relations
 @router.get("/{immunization_id}", response_model=ImmunizationWithRelations)
 def read_immunization(
     *,
@@ -80,48 +73,6 @@ def read_immunization(
     handle_not_found(immunization_obj, "Immunization")
     verify_patient_ownership(immunization_obj, current_user_patient_id, "immunization")
     return immunization_obj
-
-
-@router.put("/{immunization_id}", response_model=ImmunizationResponse)
-def update_immunization(
-    *,
-    immunization_id: int,
-    immunization_in: ImmunizationUpdate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Update an immunization record."""
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=immunization,
-        entity_id=immunization_id,
-        obj_in=immunization_in,
-        entity_type=EntityType.IMMUNIZATION,
-        user_id=current_user_id,
-        entity_name="Immunization",
-        request=request,
-    )
-
-
-@router.delete("/{immunization_id}")
-def delete_immunization(
-    *,
-    immunization_id: int,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Delete an immunization record."""
-    return handle_delete_with_logging(
-        db=db,
-        crud_obj=immunization,
-        entity_id=immunization_id,
-        entity_type=EntityType.IMMUNIZATION,
-        user_id=current_user_id,
-        entity_name="Immunization",
-        request=request,
-    )
 
 
 @router.get("/patient/{patient_id}/recent", response_model=List[ImmunizationResponse])

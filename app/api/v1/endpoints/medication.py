@@ -13,7 +13,6 @@ from app.api.v1.endpoints.utils import (
 )
 from app.crud.medication import medication
 from app.models.activity_log import EntityType
-from app.models.models import User
 from app.schemas.medication import (
     MedicationCreate,
     MedicationResponse,
@@ -24,25 +23,22 @@ from app.schemas.medication import (
 router = APIRouter()
 
 
+# Add standard CREATE endpoint
 @router.post("/", response_model=MedicationResponseWithNested)
 def create_medication(
     *,
-    medication_in: MedicationCreate,
     request: Request,
     db: Session = Depends(deps.get_db),
+    obj_in: MedicationCreate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Create new medication."""
+    """Create new medication record."""
     medication_obj = handle_create_with_logging(
-        db=db,
-        crud_obj=medication,
-        obj_in=medication_in,
-        entity_type=EntityType.MEDICATION,
-        user_id=current_user_id,
-        entity_name="Medication",
-        request=request,
+        db=db, crud_obj=medication, obj_in=obj_in,
+        entity_type=EntityType.MEDICATION, user_id=current_user_id,
+        entity_name="Medication", request=request
     )
-
+    
     # Return with relationships loaded
     medication_id = getattr(medication_obj, "id", None)
     if medication_id:
@@ -52,16 +48,19 @@ def create_medication(
     return medication_obj
 
 
+# Custom LIST endpoint with filtering (preserve original behavior)
 @router.get("/", response_model=List[MedicationResponseWithNested])
 def read_medications(
-    *,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = Query(default=100, le=100),
     name: Optional[str] = Query(None),
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
-    """Retrieve medications for the current user or specified patient (Phase 1 support)."""
+    """
+    Retrieve medications for the current user or accessible patient.
+    Includes custom filtering by medication name.
+    """
     
     medications = medication.get_by_patient(
         db=db,
@@ -82,6 +81,7 @@ def read_medications(
     return medications
 
 
+# Custom GET by ID endpoint (preserve medication relations)
 @router.get("/{medication_id}", response_model=MedicationResponseWithNested)
 def read_medication(
     *,
@@ -89,7 +89,10 @@ def read_medication(
     medication_id: int,
     current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
 ) -> Any:
-    """Get medication by ID - only allows access to user's own medications."""
+    """
+    Get medication by ID with related information - includes practitioner/pharmacy relations.
+    """
+    # Get medication and verify it belongs to the user
     medication_obj = medication.get_with_relations(
         db=db, record_id=medication_id, relations=["practitioner", "pharmacy", "condition"]
     )
@@ -98,33 +101,30 @@ def read_medication(
     return medication_obj
 
 
+# Add standard UPDATE endpoint
 @router.put("/{medication_id}", response_model=MedicationResponseWithNested)
 def update_medication(
     *,
     request: Request,
     db: Session = Depends(deps.get_db),
     medication_id: int,
-    medication_in: MedicationUpdate,
+    obj_in: MedicationUpdate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Update a medication."""
+    """Update a medication record."""
     updated_medication = handle_update_with_logging(
-        db=db,
-        crud_obj=medication,
-        entity_id=medication_id,
-        obj_in=medication_in,
-        entity_type=EntityType.MEDICATION,
-        user_id=current_user_id,
-        entity_name="Medication",
-        request=request,
+        db=db, crud_obj=medication, entity_id=medication_id, obj_in=obj_in,
+        entity_type=EntityType.MEDICATION, user_id=current_user_id,
+        entity_name="Medication", request=request
     )
-
+    
     # Return with relationships loaded
     return medication.get_with_relations(
         db=db, record_id=medication_id, relations=["practitioner", "pharmacy", "condition"]
     )
 
 
+# Add standard DELETE endpoint
 @router.delete("/{medication_id}")
 def delete_medication(
     *,
@@ -133,18 +133,15 @@ def delete_medication(
     medication_id: int,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Delete a medication."""
+    """Delete a medication record."""
     return handle_delete_with_logging(
-        db=db,
-        crud_obj=medication,
-        entity_id=medication_id,
-        entity_type=EntityType.MEDICATION,
-        user_id=current_user_id,
-        entity_name="Medication",
-        request=request,
+        db=db, crud_obj=medication, entity_id=medication_id,
+        entity_type=EntityType.MEDICATION, user_id=current_user_id,
+        entity_name="Medication", request=request
     )
 
 
+# Custom patient medications endpoint with active_only filter
 @router.get("/patient/{patient_id}", response_model=List[MedicationResponseWithNested])
 def read_patient_medications(
     *,
@@ -154,7 +151,10 @@ def read_patient_medications(
     limit: int = Query(default=100, le=100),
     active_only: bool = Query(False),
 ) -> Any:
-    """Get all medications for a specific patient."""
+    """
+    Get all medications for a specific patient.
+    Supports active_only filter to get only active medications.
+    """
     if active_only:
         medications = medication.get_active_by_patient(db=db, patient_id=patient_id)
     else:

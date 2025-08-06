@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.activity_logging import log_create, log_delete, log_update
+from app.api.v1.endpoints.utils import (
+    handle_not_found,
+    verify_patient_ownership,
+    add_standard_endpoints,
+)
 from app.crud.procedure import procedure
 from app.models.activity_log import EntityType
 from app.schemas.procedure import (
@@ -16,30 +20,19 @@ from app.schemas.procedure import (
 
 router = APIRouter()
 
+# Add standard CRUD endpoints
+add_standard_endpoints(
+    router,
+    crud_obj=procedure,
+    entity_type=EntityType.PROCEDURE,
+    entity_name="Procedure",
+    create_schema=ProcedureCreate,
+    update_schema=ProcedureUpdate,
+    response_schema=ProcedureResponse,
+    response_with_relations_schema=ProcedureWithRelations,
+)
 
-@router.post("/", response_model=ProcedureResponse)
-def create_procedure(
-    *,
-    db: Session = Depends(deps.get_db),
-    procedure_in: ProcedureCreate,
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """
-    Create new procedure.
-    """
-    procedure_obj = procedure.create(db=db, obj_in=procedure_in)
-
-    # Log the creation activity using centralized logging
-    log_create(
-        db=db,
-        entity_type=EntityType.PROCEDURE,
-        entity_obj=procedure_obj,
-        user_id=current_user_id,
-    )
-
-    return procedure_obj
-
-
+# Override the standard list endpoint to support custom filtering
 @router.get("/", response_model=List[ProcedureResponse])
 def read_procedures(
     db: Session = Depends(deps.get_db),
@@ -72,7 +65,7 @@ def read_procedures(
         )
     return procedures
 
-
+# Override the standard get endpoint to include all necessary relations
 @router.get("/{procedure_id}", response_model=ProcedureWithRelations)
 def read_procedure(
     *,
@@ -86,69 +79,9 @@ def read_procedure(
     procedure_obj = procedure.get_with_relations(
         db=db, record_id=procedure_id, relations=["patient", "practitioner", "condition"]
     )
-    if not procedure_obj:
-        raise HTTPException(status_code=404, detail="Procedure not found")
-
-    # Security check: ensure the procedure belongs to the current user
-    deps.verify_patient_record_access(
-        getattr(procedure_obj, "patient_id"), current_user_patient_id, "procedure"
-    )
-
+    handle_not_found(procedure_obj, "Procedure")
+    verify_patient_ownership(procedure_obj, current_user_patient_id, "procedure")
     return procedure_obj
-
-
-@router.put("/{procedure_id}", response_model=ProcedureResponse)
-def update_procedure(
-    *,
-    db: Session = Depends(deps.get_db),
-    procedure_id: int,
-    procedure_in: ProcedureUpdate,
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """
-    Update a procedure.
-    """
-    procedure_obj = procedure.get(db=db, id=procedure_id)
-    if not procedure_obj:
-        raise HTTPException(status_code=404, detail="Procedure not found")
-
-    procedure_obj = procedure.update(db=db, db_obj=procedure_obj, obj_in=procedure_in)
-
-    # Log the update activity using centralized logging
-    log_update(
-        db=db,
-        entity_type=EntityType.PROCEDURE,
-        entity_obj=procedure_obj,
-        user_id=current_user_id,
-    )
-
-    return procedure_obj
-
-
-@router.delete("/{procedure_id}")
-def delete_procedure(
-    *,
-    db: Session = Depends(deps.get_db),
-    procedure_id: int,
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """
-    Delete a procedure.
-    """
-    procedure_obj = procedure.get(db=db, id=procedure_id)
-    if not procedure_obj:
-        raise HTTPException(status_code=404, detail="Procedure not found")
-
-    # Log the deletion activity BEFORE deleting using centralized logging
-    log_delete(
-        db=db,
-        entity_type=EntityType.PROCEDURE,
-        entity_obj=procedure_obj,
-        user_id=current_user_id,
-    )
-
-    procedure.delete(db=db, id=procedure_id)
-    return {"message": "Procedure deleted successfully"}
 
 
 @router.get("/scheduled", response_model=List[ProcedureResponse])

@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.allergy import allergy
 from app.models.activity_log import EntityType
@@ -22,29 +23,23 @@ from app.schemas.allergy import (
 
 router = APIRouter()
 
-
+# Add standard CREATE endpoint
 @router.post("/", response_model=AllergyResponse)
 def create_allergy(
     *,
     request: Request,
     db: Session = Depends(deps.get_db),
-    allergy_in: AllergyCreate,
+    obj_in: AllergyCreate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """
-    Create new allergy record.
-    """
+    """Create new allergy record."""
     return handle_create_with_logging(
-        db=db,
-        crud_obj=allergy,
-        obj_in=allergy_in,
-        entity_type=EntityType.ALLERGY,
-        user_id=current_user_id,
-        entity_name="Allergy",
-        request=request,
+        db=db, crud_obj=allergy, obj_in=obj_in,
+        entity_type=EntityType.ALLERGY, user_id=current_user_id,
+        entity_name="Allergy", request=request
     )
 
-
+# Custom LIST endpoint with filtering (preserve original behavior)
 @router.get("/", response_model=List[AllergyResponse])
 def read_allergies(
     db: Session = Depends(deps.get_db),
@@ -56,6 +51,7 @@ def read_allergies(
 ) -> Any:
     """
     Retrieve allergies for the current user or accessible patient.
+    Includes custom filtering by severity and allergen.
     """
     
     # Filter allergies by the target patient_id
@@ -73,7 +69,7 @@ def read_allergies(
         )
     return allergies
 
-
+# Custom GET by ID endpoint (preserve medication relations)
 @router.get("/{allergy_id}", response_model=AllergyWithRelations)
 def read_allergy(
     *,
@@ -82,7 +78,7 @@ def read_allergy(
     current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
 ) -> Any:
     """
-    Get allergy by ID with related information - only allows access to user's own allergies.
+    Get allergy by ID with related information - includes medication relations.
     """
     # Get allergy and verify it belongs to the user
     allergy_obj = allergy.get_with_relations(
@@ -92,31 +88,24 @@ def read_allergy(
     verify_patient_ownership(allergy_obj, current_user_patient_id, "allergy")
     return allergy_obj
 
-
+# Add standard UPDATE endpoint
 @router.put("/{allergy_id}", response_model=AllergyResponse)
 def update_allergy(
     *,
     request: Request,
     db: Session = Depends(deps.get_db),
     allergy_id: int,
-    allergy_in: AllergyUpdate,
+    obj_in: AllergyUpdate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """
-    Update an allergy record.
-    """
+    """Update an allergy record."""
     return handle_update_with_logging(
-        db=db,
-        crud_obj=allergy,
-        entity_id=allergy_id,
-        obj_in=allergy_in,
-        entity_type=EntityType.ALLERGY,
-        user_id=current_user_id,
-        entity_name="Allergy",
-        request=request,
+        db=db, crud_obj=allergy, entity_id=allergy_id, obj_in=obj_in,
+        entity_type=EntityType.ALLERGY, user_id=current_user_id,
+        entity_name="Allergy", request=request
     )
 
-
+# Add standard DELETE endpoint  
 @router.delete("/{allergy_id}")
 def delete_allergy(
     *,
@@ -125,17 +114,11 @@ def delete_allergy(
     allergy_id: int,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """
-    Delete an allergy record.
-    """
+    """Delete an allergy record."""
     return handle_delete_with_logging(
-        db=db,
-        crud_obj=allergy,
-        entity_id=allergy_id,
-        entity_type=EntityType.ALLERGY,
-        user_id=current_user_id,
-        entity_name="Allergy",
-        request=request,
+        db=db, crud_obj=allergy, entity_id=allergy_id,
+        entity_type=EntityType.ALLERGY, user_id=current_user_id,
+        entity_name="Allergy", request=request
     )
 
 

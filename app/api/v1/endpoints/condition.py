@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.models.models import User
 from app.api.v1.endpoints.utils import (
     handle_create_with_logging,
     handle_delete_with_logging,
@@ -15,6 +14,7 @@ from app.api.v1.endpoints.utils import (
 from app.crud.condition import condition, condition_medication
 from app.crud.medication import medication as medication_crud
 from app.models.activity_log import EntityType
+from app.models.models import User
 from app.schemas.condition import (
     ConditionCreate,
     ConditionDropdownOption,
@@ -30,36 +30,36 @@ from app.schemas.condition import (
 router = APIRouter()
 
 
+# Add standard CREATE endpoint
 @router.post("/", response_model=ConditionResponse)
 def create_condition(
     *,
-    condition_in: ConditionCreate,
     request: Request,
     db: Session = Depends(deps.get_db),
+    obj_in: ConditionCreate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Create new condition."""
+    """Create new condition record."""
     return handle_create_with_logging(
-        db=db,
-        crud_obj=condition,
-        obj_in=condition_in,
-        entity_type=EntityType.CONDITION,
-        user_id=current_user_id,
-        entity_name="Condition",
-        request=request,
+        db=db, crud_obj=condition, obj_in=obj_in,
+        entity_type=EntityType.CONDITION, user_id=current_user_id,
+        entity_name="Condition", request=request
     )
 
 
+# Custom LIST endpoint with filtering (preserve original behavior)
 @router.get("/", response_model=List[ConditionResponse])
 def read_conditions(
-    *,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = Query(default=100, le=100),
     status: Optional[str] = Query(None),
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
-    """Retrieve conditions for the current user or specified patient (Phase 1 support)."""
+    """
+    Retrieve conditions for the current user or accessible patient.
+    Includes custom filtering by status.
+    """
     
     # Filter conditions by the verified accessible patient_id
     if status:
@@ -71,6 +71,63 @@ def read_conditions(
             db, patient_id=target_patient_id, skip=skip, limit=limit
         )
     return conditions
+
+
+# Custom GET by ID endpoint (preserve condition relations)
+@router.get("/{condition_id}", response_model=ConditionWithRelations)
+def read_condition(
+    *,
+    db: Session = Depends(deps.get_db),
+    condition_id: int,
+    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+) -> Any:
+    """
+    Get condition by ID with related information - includes patient/practitioner relations.
+    """
+    # Get condition and verify it belongs to the user
+    condition_obj = condition.get_with_relations(
+        db=db,
+        record_id=condition_id,
+        relations=["patient", "practitioner", "treatments"],
+    )
+    handle_not_found(condition_obj, "Condition")
+    verify_patient_ownership(condition_obj, current_user_patient_id, "condition")
+    return condition_obj
+
+
+# Add standard UPDATE endpoint
+@router.put("/{condition_id}", response_model=ConditionResponse)
+def update_condition(
+    *,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    condition_id: int,
+    obj_in: ConditionUpdate,
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> Any:
+    """Update a condition record."""
+    return handle_update_with_logging(
+        db=db, crud_obj=condition, entity_id=condition_id, obj_in=obj_in,
+        entity_type=EntityType.CONDITION, user_id=current_user_id,
+        entity_name="Condition", request=request
+    )
+
+
+# Add standard DELETE endpoint
+@router.delete("/{condition_id}")
+def delete_condition(
+    *,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    condition_id: int,
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> Any:
+    """Delete a condition record."""
+    return handle_delete_with_logging(
+        db=db, crud_obj=condition, entity_id=condition_id,
+        entity_type=EntityType.CONDITION, user_id=current_user_id,
+        entity_name="Condition", request=request
+    )
 
 
 @router.get("/dropdown", response_model=List[ConditionDropdownOption])
@@ -291,69 +348,6 @@ def delete_condition_medication(
     # Delete the relationship
     condition_medication.delete(db, id=relationship_id)
     return {"message": "Condition medication relationship deleted successfully"}
-
-
-# Generic condition routes (must come after specific medication routes)
-
-@router.get("/{condition_id}", response_model=ConditionWithRelations)
-def read_condition(
-    *,
-    db: Session = Depends(deps.get_db),
-    condition_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Get condition by ID with related information - only allows access to user's own conditions."""
-    # Get condition and verify it belongs to the user
-    condition_obj = condition.get_with_relations(
-        db=db,
-        record_id=condition_id,
-        relations=["patient", "practitioner", "treatments"],
-    )
-    handle_not_found(condition_obj, "Condition")
-    verify_patient_ownership(condition_obj, current_user_patient_id, "condition")
-    return condition_obj
-
-
-@router.put("/{condition_id}", response_model=ConditionResponse)
-def update_condition(
-    *,
-    condition_id: int,
-    condition_in: ConditionUpdate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Update a condition."""
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=condition,
-        entity_id=condition_id,
-        obj_in=condition_in,
-        entity_type=EntityType.CONDITION,
-        user_id=current_user_id,
-        entity_name="Condition",
-        request=request,
-    )
-
-
-@router.delete("/{condition_id}")
-def delete_condition(
-    *,
-    condition_id: int,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Delete a condition."""
-    return handle_delete_with_logging(
-        db=db,
-        crud_obj=condition,
-        entity_id=condition_id,
-        entity_type=EntityType.CONDITION,
-        user_id=current_user_id,
-        entity_name="Condition",
-        request=request,
-    )
 
 
 @router.get("/patient/{patient_id}/active", response_model=List[ConditionResponse])

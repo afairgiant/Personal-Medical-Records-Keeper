@@ -1,10 +1,14 @@
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.activity_logging import log_create, log_delete, log_update
+from app.api.v1.endpoints.utils import (
+    handle_not_found,
+    verify_patient_ownership,
+    add_standard_endpoints,
+)
 from app.crud.emergency_contact import emergency_contact
 from app.models.activity_log import EntityType
 from app.models.models import EmergencyContact
@@ -17,10 +21,23 @@ from app.schemas.emergency_contact import (
 
 router = APIRouter()
 
+# Add standard CRUD endpoints
+add_standard_endpoints(
+    router,
+    crud_obj=emergency_contact,
+    entity_type=EntityType.EMERGENCY_CONTACT,
+    entity_name="Emergency Contact",
+    create_schema=EmergencyContactCreate,
+    update_schema=EmergencyContactUpdate,
+    response_schema=EmergencyContactResponse,
+    response_with_relations_schema=EmergencyContactWithRelations,
+)
 
+# Override the standard create endpoint to use specialized creation method
 @router.post("/", response_model=EmergencyContactResponse)
 def create_emergency_contact(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     emergency_contact_in: EmergencyContactCreate,
     current_user_id: int = Depends(deps.get_current_user_id),
@@ -33,16 +50,18 @@ def create_emergency_contact(
     )
 
     # Log the creation activity using centralized logging
+    from app.api.activity_logging import log_create
     log_create(
         db=db,
         entity_type=EntityType.EMERGENCY_CONTACT,
         entity_obj=emergency_contact_obj,
         user_id=current_user_id,
+        request=request,
     )
 
     return emergency_contact_obj
 
-
+# Override the standard list endpoint to support custom filtering and ordering
 @router.get("/", response_model=List[EmergencyContactResponse])
 def read_emergency_contacts(
     db: Session = Depends(deps.get_db),
@@ -74,7 +93,7 @@ def read_emergency_contacts(
 
     return contacts
 
-
+# Override the standard get endpoint to use custom query with joinedload
 @router.get("/{emergency_contact_id}", response_model=EmergencyContactWithRelations)
 def read_emergency_contact(
     emergency_contact_id: int,
@@ -91,83 +110,9 @@ def read_emergency_contact(
         .filter(EmergencyContact.id == emergency_contact_id)
         .first()
     )
-
-    if not contact_obj:
-        raise HTTPException(status_code=404, detail="Emergency Contact not found")
-
-    # Security check: ensure the contact belongs to the current user
-    deps.verify_patient_record_access(
-        getattr(contact_obj, "patient_id"), current_user_patient_id, "emergency contact"
-    )
+    handle_not_found(contact_obj, "Emergency Contact")
+    verify_patient_ownership(contact_obj, current_user_patient_id, "emergency contact")
     return contact_obj
-
-
-@router.put("/{emergency_contact_id}", response_model=EmergencyContactResponse)
-def update_emergency_contact(
-    *,
-    db: Session = Depends(deps.get_db),
-    emergency_contact_id: int,
-    emergency_contact_in: EmergencyContactUpdate,
-    current_user_id: int = Depends(deps.get_current_user_id),
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Update an emergency contact."""
-    emergency_contact_obj = emergency_contact.get(db=db, id=emergency_contact_id)
-    if not emergency_contact_obj:
-        raise HTTPException(status_code=404, detail="Emergency Contact not found")
-
-    # Security check: ensure the contact belongs to the current user
-    deps.verify_patient_record_access(
-        getattr(emergency_contact_obj, "patient_id"),
-        current_user_patient_id,
-        "emergency contact",
-    )
-
-    emergency_contact_obj = emergency_contact.update(
-        db=db, db_obj=emergency_contact_obj, obj_in=emergency_contact_in
-    )
-
-    # Log the update activity using centralized logging
-    log_update(
-        db=db,
-        entity_type=EntityType.EMERGENCY_CONTACT,
-        entity_obj=emergency_contact_obj,
-        user_id=current_user_id,
-    )
-
-    return emergency_contact_obj
-
-
-@router.delete("/{emergency_contact_id}")
-def delete_emergency_contact(
-    *,
-    db: Session = Depends(deps.get_db),
-    emergency_contact_id: int,
-    current_user_id: int = Depends(deps.get_current_user_id),
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Delete an emergency contact."""
-    emergency_contact_obj = emergency_contact.get(db=db, id=emergency_contact_id)
-    if not emergency_contact_obj:
-        raise HTTPException(status_code=404, detail="Emergency Contact not found")
-
-    # Security check: ensure the contact belongs to the current user
-    deps.verify_patient_record_access(
-        getattr(emergency_contact_obj, "patient_id"),
-        current_user_patient_id,
-        "emergency contact",
-    )
-
-    # Log the deletion activity BEFORE deleting using centralized logging
-    log_delete(
-        db=db,
-        entity_type=EntityType.EMERGENCY_CONTACT,
-        entity_obj=emergency_contact_obj,
-        user_id=current_user_id,
-    )
-
-    emergency_contact.delete(db=db, id=emergency_contact_id)
-    return {"message": "Emergency Contact deleted successfully"}
 
 
 @router.get("/patient/{patient_id}/primary", response_model=EmergencyContactResponse)

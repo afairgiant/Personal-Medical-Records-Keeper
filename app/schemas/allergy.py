@@ -1,9 +1,22 @@
 from datetime import date
-from typing import Optional
+from typing import Optional, ClassVar, List
 from pydantic import BaseModel, Field, validator
 
+from app.schemas.base import (
+    PatientOwnedBase,
+    DateValidationMixin, 
+    StatusValidationMixin,
+    SeverityValidationMixin
+)
 
-class AllergyBase(BaseModel):
+
+class AllergyBase(PatientOwnedBase, DateValidationMixin, StatusValidationMixin, SeverityValidationMixin):
+    """Base schema for allergy records with validation mixins."""
+    
+    # Define valid severities for allergy-specific validation
+    VALID_SEVERITIES: ClassVar[List[str]] = ["mild", "moderate", "severe", "life-threatening"]
+    VALID_STATUSES: ClassVar[List[str]] = ["active", "inactive", "resolved", "unconfirmed"]
+    
     allergen: str = Field(
         ..., min_length=2, max_length=200, description="Name of the allergen"
     )
@@ -18,35 +31,20 @@ class AllergyBase(BaseModel):
         None, max_length=1000, description="Additional notes about the allergy"
     )
     status: str = Field(default="active", description="Status of the allergy")
-    patient_id: int = Field(..., gt=0, description="ID of the patient")
     medication_id: Optional[int] = Field(None, gt=0, description="ID of the medication causing this allergy")
-
-    @validator("severity")
-    def validate_severity(cls, v):
-        valid_severities = ["mild", "moderate", "severe", "life-threatening"]
-        if v.lower() not in valid_severities:
-            raise ValueError(f"Severity must be one of: {', '.join(valid_severities)}")
-        return v.lower()
-
-    @validator("status")
-    def validate_status(cls, v):
-        valid_statuses = ["active", "inactive", "resolved", "unconfirmed"]
-        if v.lower() not in valid_statuses:
-            raise ValueError(f"Status must be one of: {', '.join(valid_statuses)}")
-        return v.lower()
-
-    @validator("onset_date")
-    def validate_onset_date(cls, v):
-        if v and v > date.today():
-            raise ValueError("Onset date cannot be in the future")
-        return v
 
 
 class AllergyCreate(AllergyBase):
     pass
 
 
-class AllergyUpdate(BaseModel):
+class AllergyUpdate(DateValidationMixin, StatusValidationMixin, SeverityValidationMixin, BaseModel):
+    """Schema for updating allergy records."""
+    
+    # Define valid severities for allergy-specific validation
+    VALID_SEVERITIES: ClassVar[List[str]] = ["mild", "moderate", "severe", "life-threatening"]
+    VALID_STATUSES: ClassVar[List[str]] = ["active", "inactive", "resolved", "unconfirmed"]
+    
     allergen: Optional[str] = Field(None, min_length=2, max_length=200)
     reaction: Optional[str] = Field(None, max_length=500)
     severity: Optional[str] = None
@@ -54,32 +52,6 @@ class AllergyUpdate(BaseModel):
     notes: Optional[str] = Field(None, max_length=1000)
     status: Optional[str] = None
     medication_id: Optional[int] = Field(None, gt=0)
-
-    @validator("severity")
-    def validate_severity(cls, v):
-        if v is not None:
-            valid_severities = ["mild", "moderate", "severe", "life-threatening"]
-            if v.lower() not in valid_severities:
-                raise ValueError(
-                    f"Severity must be one of: {', '.join(valid_severities)}"
-                )
-            return v.lower()
-        return v
-
-    @validator("status")
-    def validate_status(cls, v):
-        if v is not None:
-            valid_statuses = ["active", "inactive", "resolved", "unconfirmed"]
-            if v.lower() not in valid_statuses:
-                raise ValueError(f"Status must be one of: {', '.join(valid_statuses)}")
-            return v.lower()
-        return v
-
-    @validator("onset_date")
-    def validate_onset_date(cls, v):
-        if v and v > date.today():
-            raise ValueError("Onset date cannot be in the future")
-        return v
 
 
 class AllergyResponse(AllergyBase):

@@ -144,6 +144,7 @@ class EntityType:
     PROCEDURE = "procedure"
     ENCOUNTER = "encounter"
     EMERGENCY_CONTACT = "emergency_contact"
+    VITALS = "vitals"
     PHARMACY = "pharmacy"
     FAMILY_MEMBER = "family_member"
     INSURANCE = "insurance"
@@ -171,6 +172,7 @@ class EntityType:
             cls.PROCEDURE,
             cls.ENCOUNTER,
             cls.EMERGENCY_CONTACT,
+            cls.VITALS,
             cls.PHARMACY,
             cls.FAMILY_MEMBER,
             cls.INSURANCE,

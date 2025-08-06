@@ -24,6 +24,7 @@ from app.api.v1.endpoints.utils import (
     handle_delete_with_logging,
     handle_not_found,
     handle_update_with_logging,
+    add_standard_endpoints,
 )
 from app.core.config import settings
 from app.core.database import get_db
@@ -47,8 +48,19 @@ from app.schemas.lab_result_file import LabResultFileCreate, LabResultFileRespon
 
 router = APIRouter()
 
+# Add standard CRUD endpoints with custom delete override
+add_standard_endpoints(
+    router,
+    crud_obj=lab_result,
+    entity_type=EntityType.LAB_RESULT,
+    entity_name="Lab result",
+    create_schema=LabResultCreate,
+    update_schema=LabResultUpdate,
+    response_schema=LabResultResponse,
+    response_with_relations_schema=LabResultWithRelations,
+)
 
-# Lab Result Endpoints
+# Override the standard list endpoint with custom response formatting
 @router.get("/", response_model=List[LabResultWithRelations])
 def get_lab_results(
     *,
@@ -101,7 +113,7 @@ def get_lab_results(
 
     return response_results
 
-
+# Override the standard get endpoint with custom response formatting
 @router.get("/{lab_result_id}", response_model=LabResultWithRelations)
 def get_lab_result(
     *,
@@ -148,49 +160,7 @@ def get_lab_result(
 
     return result_dict
 
-
-@router.post("/", response_model=LabResultResponse, status_code=status.HTTP_201_CREATED)
-def create_lab_result(
-    *,
-    lab_result_in: LabResultCreate,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-):
-    """Create a new lab result."""
-    return handle_create_with_logging(
-        db=db,
-        crud_obj=lab_result,
-        obj_in=lab_result_in,
-        entity_type=EntityType.LAB_RESULT,
-        user_id=current_user_id,
-        entity_name="Lab result",
-        request=request,
-    )
-
-
-@router.put("/{lab_result_id}", response_model=LabResultResponse)
-def update_lab_result(
-    *,
-    lab_result_id: int,
-    lab_result_in: LabResultUpdate,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-):
-    """Update an existing lab result."""
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=lab_result,
-        entity_id=lab_result_id,
-        obj_in=lab_result_in,
-        entity_type=EntityType.LAB_RESULT,
-        user_id=current_user_id,
-        entity_name="Lab result",
-        request=request,
-    )
-
-
+# Override the standard delete endpoint with custom file handling logic
 @router.delete("/{lab_result_id}")
 def delete_lab_result(
     *,
