@@ -136,8 +136,8 @@ const Treatments = () => {
       dosage: treatment.dosage || '',
       frequency: treatment.frequency || '',
       notes: treatment.notes || '',
-      condition_id: treatment.condition_id || '',
-      practitioner_id: treatment.practitioner_id || '',
+      condition_id: treatment.condition_id ? String(treatment.condition_id) : '',
+      practitioner_id: treatment.practitioner_id ? String(treatment.practitioner_id) : '',
     });
     setShowModal(true);
   };

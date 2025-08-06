@@ -19,7 +19,27 @@ from app.schemas.vitals import VitalsCreate, VitalsResponse, VitalsStats, Vitals
 
 router = APIRouter()
 
-# Add standard CRUD endpoints
+# Define specific endpoints BEFORE standard CRUD endpoints to avoid path conflicts
+# Custom stats endpoint (preserve existing functionality)
+@router.get("/stats", response_model=VitalsStats)
+def read_current_user_vitals_stats(
+    *,
+    db: Session = Depends(deps.get_db),
+    patient_id: Optional[int] = Query(None, description="Patient ID for Phase 1 patient switching"),
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> Any:
+    """Get vitals statistics for the current user or specified patient (Phase 1 support)."""
+    
+    # Phase 1 support: Use patient_id if provided, otherwise fall back to user's own patient
+    if patient_id is not None:
+        target_patient_id = patient_id
+    else:
+        target_patient_id = deps.get_current_user_patient_id(db, current_user_id)
+    
+    stats = vitals.get_vitals_stats(db=db, patient_id=target_patient_id)
+    return stats
+
+# Add standard CRUD endpoints AFTER specific endpoints
 add_standard_endpoints(
     router,
     crud_obj=vitals,
@@ -112,26 +132,6 @@ def read_vitals_by_id(
     handle_not_found(vitals_obj, "Vitals reading")
     verify_patient_ownership(vitals_obj, current_user_patient_id, "vitals")
     return vitals_obj
-
-# Custom stats endpoint (preserve existing functionality)
-@router.get("/stats", response_model=VitalsStats)
-def read_current_user_vitals_stats(
-    *,
-    db: Session = Depends(deps.get_db),
-    patient_id: Optional[int] = Query(None, description="Patient ID for Phase 1 patient switching"),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Get vitals statistics for the current user or specified patient (Phase 1 support)."""
-    
-    # Phase 1 support: Use patient_id if provided, otherwise fall back to user's own patient
-    if patient_id is not None:
-        target_patient_id = patient_id
-    else:
-        target_patient_id = deps.get_current_user_patient_id(db, current_user_id)
-    
-    stats = vitals.get_vitals_stats(db=db, patient_id=target_patient_id)
-    return stats
-
 
 @router.get("/patient/{patient_id}", response_model=List[VitalsResponse])
 def read_patient_vitals(
