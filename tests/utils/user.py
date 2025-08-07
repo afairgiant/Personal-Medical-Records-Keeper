@@ -18,6 +18,14 @@ def random_lower_string() -> str:
     return "".join(random.choices(string.ascii_lowercase, k=32))
 
 
+def random_password() -> str:
+    """Generate a random password that meets complexity requirements."""
+    # Generate password with letters and numbers to meet validation requirements
+    letters = "".join(random.choices(string.ascii_lowercase, k=8))
+    numbers = "".join(random.choices(string.digits, k=3))
+    return f"Test{letters.capitalize()}{numbers}"
+
+
 def random_email() -> str:
     """Generate a random email address."""
     return f"{random_lower_string()}@{random_lower_string()}.com"
@@ -26,7 +34,7 @@ def random_email() -> str:
 def create_random_user(db: Session) -> dict:
     """Create a random user for testing."""
     username = random_lower_string()
-    password = random_lower_string()
+    password = random_password()  # Use password that meets complexity requirements
     email = random_email()
     full_name = f"Test {username.title()}"
     
@@ -60,7 +68,16 @@ def create_user_authentication_headers(*, client: TestClient, username: str, pas
 
 def create_user_token_headers(user_id: int) -> Dict[str, str]:
     """Create authentication headers with a token for a specific user ID."""
-    access_token = create_access_token(subject=user_id)
+    # Note: JWT tokens should use username in 'sub' claim, but this function takes user_id
+    # This is a legacy function - consider using username directly in new code
+    access_token = create_access_token(data={"sub": str(user_id)})
+    headers = {"Authorization": f"Bearer {access_token}"}
+    return headers
+
+
+def create_token_headers_for_user(user) -> Dict[str, str]:
+    """Create authentication headers with a token for a User object."""
+    access_token = create_access_token(data={"sub": user.username})
     headers = {"Authorization": f"Bearer {access_token}"}
     return headers
 
@@ -68,7 +85,7 @@ def create_user_token_headers(user_id: int) -> Dict[str, str]:
 def create_admin_user(db: Session) -> dict:
     """Create an admin user for testing."""
     username = f"admin_{random_lower_string()}"
-    password = random_lower_string()
+    password = random_password()  # Use password that meets complexity requirements
     email = random_email()
     full_name = f"Admin {username.title()}"
     

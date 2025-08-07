@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.api.activity_logging import log_create, log_delete, log_update
+from app.api.v1.endpoints.utils import add_standard_endpoints
 from app.crud.lab_result import lab_result
 from app.crud.lab_result_file import lab_result_file
 from app.models.activity_log import EntityType
@@ -23,6 +24,9 @@ from app.schemas.lab_result_file import (
 )
 
 router = APIRouter()
+
+# NOTE: This endpoint uses custom file handling and cannot use standard CRUD endpoints
+# due to specialized file upload/download logic and complex authorization checks
 
 # Configuration
 UPLOAD_DIRECTORY = "uploads/lab_result_files"

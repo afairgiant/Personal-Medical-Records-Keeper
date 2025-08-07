@@ -105,6 +105,14 @@ export const conditionFormFields = [
     gridColumn: 12,
   },
   {
+    name: 'condition_name',
+    type: 'text',
+    label: 'Condition Name (Optional)',
+    placeholder: 'Enter condition name',
+    description: 'Optional alternative name for the condition',
+    gridColumn: 12,
+  },
+  {
     name: 'status',
     type: 'select',
     label: 'Status',

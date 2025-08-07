@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.crud.patient import patient as patient_crud
 from app.schemas.patient import PatientCreate
-from tests.utils.user import create_random_user, create_user_token_headers
+from tests.utils.user import create_random_user, create_token_headers_for_user
 
 
 class TestMedicationAPI:
@@ -21,7 +21,7 @@ class TestMedicationAPI:
         patient_data = PatientCreate(
             first_name="John",
             last_name="Doe",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M",
             address="123 Main St"
         )
@@ -33,7 +33,7 @@ class TestMedicationAPI:
     @pytest.fixture
     def authenticated_headers(self, user_with_patient):
         """Create authentication headers."""
-        return create_user_token_headers(user_with_patient["user"].id)
+        return create_token_headers_for_user(user_with_patient["user"])
 
     def test_create_medication_success(self, client: TestClient, user_with_patient, authenticated_headers):
         """Test successful medication creation."""
@@ -42,7 +42,7 @@ class TestMedicationAPI:
             "dosage": "100mg",
             "frequency": "once daily",
             "route": "oral",
-            "effective_period_start": date(2024, 1, 1),
+            "effective_period_start": "2024-01-01",
             "status": "active",
             "indication": "Pain relief"
         }
@@ -228,26 +228,26 @@ class TestMedicationAPI:
         patient1_data = PatientCreate(
             first_name="User",
             last_name="One",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M"
         )
         patient1 = patient_crud.create_for_user(
             db_session, user_id=user1_data["user"].id, patient_data=patient1_data
         )
-        headers1 = create_user_token_headers(user1_data["user"].id)
+        headers1 = create_token_headers_for_user(user1_data["user"])
 
         # Create second user with patient
         user2_data = create_random_user(db_session)
         patient2_data = PatientCreate(
             first_name="User",
             last_name="Two",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="F"
         )
         patient2 = patient_crud.create_for_user(
             db_session, user_id=user2_data["user"].id, patient_data=patient2_data
         )
-        headers2 = create_user_token_headers(user2_data["user"].id)
+        headers2 = create_token_headers_for_user(user2_data["user"])
 
         # User1 creates a medication
         medication_data = {
@@ -363,8 +363,8 @@ class TestMedicationAPI:
             "medication_name": "Aspirin",
             "dosage": "100mg",
             "frequency": "once daily",
-            "effective_period_start": date(2024, 1, 1),
-            "effective_period_end": date(2024, 12, 31),
+            "effective_period_start": "2024-01-01",
+            "effective_period_end": "2024-12-31",
             "status": "active"
         }
 

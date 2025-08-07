@@ -14,6 +14,7 @@ import { DateInput } from '@mantine/dates';
 import { IconX } from '@tabler/icons-react';
 import FormLoadingOverlay from '../../shared/FormLoadingOverlay';
 import SubmitButton from '../../shared/SubmitButton';
+import { useFormHandlers } from '../../../hooks/useFormHandlers';
 import logger from '../../../services/logger';
 
 const ImmunizationFormWrapper = ({
@@ -32,6 +33,8 @@ const ImmunizationFormWrapper = ({
     e.preventDefault();
     onSubmit(e);
   };
+
+  const { handleDateChange } = useFormHandlers(onInputChange);
 
   const handleInputChange = (field, value) => {
     onInputChange({
@@ -76,7 +79,7 @@ const ImmunizationFormWrapper = ({
             label="Date Administered"
             name="date_administered"
             value={formData.date_administered ? new Date(formData.date_administered) : null}
-            onChange={(value) => handleInputChange('date_administered', value?.toISOString().split('T')[0] || '')}
+            onChange={handleDateChange('date_administered')}
             placeholder="Select administration date"
           />
 
@@ -152,7 +155,7 @@ const ImmunizationFormWrapper = ({
             label="Expiration Date"
             name="expiration_date"
             value={formData.expiration_date ? new Date(formData.expiration_date) : null}
-            onChange={(value) => handleInputChange('expiration_date', value?.toISOString().split('T')[0] || '')}
+            onChange={handleDateChange('expiration_date')}
             placeholder="Select expiration date"
           />
 

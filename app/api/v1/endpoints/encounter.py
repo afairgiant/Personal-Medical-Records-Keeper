@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.encounter import encounter
 from app.models.activity_log import EntityType
@@ -22,29 +23,11 @@ from app.schemas.encounter import (
 
 router = APIRouter()
 
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
 
-@router.post("/", response_model=EncounterResponse)
-def create_encounter(
-    *,
-    encounter_in: EncounterCreate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Create new encounter."""
-    return handle_create_with_logging(
-        db=db,
-        crud_obj=encounter,
-        obj_in=encounter_in,
-        entity_type=EntityType.ENCOUNTER,
-        user_id=current_user_id,
-        entity_name="Encounter",
-        request=request,
-    )
-
-
-@router.get("/", response_model=List[EncounterResponse])
-def read_encounters(
+# Custom search endpoint with practitioner_id filtering
+@router.get("/search", response_model=List[EncounterResponse])
+def search_encounters(
     *,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
@@ -52,7 +35,7 @@ def read_encounters(
     practitioner_id: Optional[int] = Query(None),
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
-    """Retrieve encounters for the current user or specified patient (Phase 1 support)."""
+    """Search encounters with filtering by practitioner_id."""
     
     # Filter encounters by the verified accessible patient_id
     if practitioner_id:
@@ -70,62 +53,20 @@ def read_encounters(
     return encounters
 
 
-@router.get("/{encounter_id}", response_model=EncounterWithRelations)
-def read_encounter(
-    *,
-    db: Session = Depends(deps.get_db),
-    encounter_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Get encounter by ID with related information - only allows access to user's own encounters."""
-    encounter_obj = encounter.get_with_relations(
-        db=db, record_id=encounter_id, relations=["patient", "practitioner", "condition"]
-    )
-    handle_not_found(encounter_obj, "Encounter")
-    verify_patient_ownership(encounter_obj, current_user_patient_id, "encounter")
-    return encounter_obj
 
-
-@router.put("/{encounter_id}", response_model=EncounterResponse)
-def update_encounter(
-    *,
-    encounter_id: int,
-    encounter_in: EncounterUpdate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Update an encounter."""
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=encounter,
-        entity_id=encounter_id,
-        obj_in=encounter_in,
-        entity_type=EntityType.ENCOUNTER,
-        user_id=current_user_id,
-        entity_name="Encounter",
-        request=request,
-    )
-
-
-@router.delete("/{encounter_id}")
-def delete_encounter(
-    *,
-    encounter_id: int,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Delete an encounter."""
-    return handle_delete_with_logging(
-        db=db,
-        crud_obj=encounter,
-        entity_id=encounter_id,
-        entity_type=EntityType.ENCOUNTER,
-        user_id=current_user_id,
-        entity_name="Encounter",
-        request=request,
-    )
+# Add standard CRUD endpoints AFTER custom endpoints
+# This creates: POST /, GET /, GET /{entity_id}, PUT /{entity_id}, DELETE /{entity_id}
+# The GET /{entity_id} will include relations per the response schema
+add_standard_endpoints(
+    router,
+    crud_obj=encounter,
+    entity_type=EntityType.ENCOUNTER,
+    entity_name="Encounter",
+    create_schema=EncounterCreate,
+    update_schema=EncounterUpdate,
+    response_schema=EncounterResponse,
+    response_with_relations_schema=EncounterWithRelations,
+)
 
 
 @router.get("/patient/{patient_id}/recent", response_model=List[EncounterResponse])

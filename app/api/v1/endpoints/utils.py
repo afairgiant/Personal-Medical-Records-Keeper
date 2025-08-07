@@ -568,6 +568,9 @@ def add_standard_endpoints(
         current_user_id: int = Depends(deps.get_current_user_id),
     ) -> Any:
         """Create new entity record."""
+        # The patient_id should already be in the request payload from the frontend
+        # Just pass the obj_in as-is since it contains the correct patient_id
+        
         return handle_create_with_logging(
             db=db, crud_obj=crud_obj, obj_in=obj_in,
             entity_type=entity_type, user_id=current_user_id,

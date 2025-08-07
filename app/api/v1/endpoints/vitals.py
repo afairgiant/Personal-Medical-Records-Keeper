@@ -19,7 +19,8 @@ from app.schemas.vitals import VitalsCreate, VitalsResponse, VitalsStats, Vitals
 
 router = APIRouter()
 
-# Define specific endpoints BEFORE standard CRUD endpoints to avoid path conflicts
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
+
 # Custom stats endpoint (preserve existing functionality)
 @router.get("/stats", response_model=VitalsStats)
 def read_current_user_vitals_stats(
@@ -39,19 +40,37 @@ def read_current_user_vitals_stats(
     stats = vitals.get_vitals_stats(db=db, patient_id=target_patient_id)
     return stats
 
-# Add standard CRUD endpoints AFTER specific endpoints
-add_standard_endpoints(
-    router,
-    crud_obj=vitals,
-    entity_type=EntityType.VITALS,
-    entity_name="Vitals",
-    create_schema=VitalsCreate,
-    update_schema=VitalsUpdate,
-    response_schema=VitalsResponse,
-    response_with_relations_schema=VitalsResponse,  # No separate with_relations schema
-)
+# Custom list endpoint to preserve patient switching
+@router.get("/", response_model=List[VitalsResponse])
+def read_vitals(
+    db: Session = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = Query(default=100, le=100),
+    target_patient_id: int = Depends(deps.get_accessible_patient_id),
+) -> Any:
+    """Retrieve vitals readings for the current user or accessible patient."""
+    vitals_readings = vitals.get_by_patient(
+        db, patient_id=target_patient_id, skip=skip, limit=limit
+    )
+    return vitals_readings
 
-# Override the standard create endpoint to use BMI calculation
+# Custom GET by ID with practitioner relations
+@router.get("/{vitals_id}", response_model=VitalsResponse)
+def read_vitals_by_id(
+    *,
+    db: Session = Depends(deps.get_db),
+    vitals_id: int,
+    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+) -> Any:
+    """Get vitals reading by ID with related information - only allows access to user's own vitals."""
+    vitals_obj = vitals.get_with_relations(
+        db=db, record_id=vitals_id, relations=["patient", "practitioner"]
+    )
+    handle_not_found(vitals_obj, "Vitals reading")
+    verify_patient_ownership(vitals_obj, current_user_patient_id, "vitals")
+    return vitals_obj
+
+# Custom CREATE endpoint with BMI calculation
 @router.post("/", response_model=VitalsResponse)
 def create_vitals(
     *,
@@ -77,7 +96,7 @@ def create_vitals(
 
     return vitals_obj
 
-# Override the standard update endpoint to handle BMI recalculation
+# Custom UPDATE endpoint with BMI recalculation
 @router.put("/{vitals_id}", response_model=VitalsResponse)
 def update_vitals(
     *,
@@ -117,21 +136,23 @@ def update_vitals(
 
     return updated_vitals
 
-# Override the standard get endpoint to include practitioner relations
-@router.get("/{vitals_id}", response_model=VitalsResponse)
-def read_vitals_by_id(
+@router.delete("/{vitals_id}")
+def delete_vitals(
     *,
+    request: Request,
     db: Session = Depends(deps.get_db),
     vitals_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+    current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Get vitals reading by ID with related information - only allows access to user's own vitals."""
-    vitals_obj = vitals.get_with_relations(
-        db=db, record_id=vitals_id, relations=["patient", "practitioner"]
+    """Delete a vitals reading."""
+    return handle_delete_with_logging(
+        db=db, crud_obj=vitals, entity_id=vitals_id,
+        entity_type=EntityType.VITALS, user_id=current_user_id,
+        entity_name="Vitals", request=request
     )
-    handle_not_found(vitals_obj, "Vitals reading")
-    verify_patient_ownership(vitals_obj, current_user_patient_id, "vitals")
-    return vitals_obj
+
+# NOTE: Vitals endpoints require custom CRUD due to BMI calculation and patient switching
+# Cannot use add_standard_endpoints() due to special BMI calculation needs in CREATE/UPDATE
 
 @router.get("/patient/{patient_id}", response_model=List[VitalsResponse])
 def read_patient_vitals(

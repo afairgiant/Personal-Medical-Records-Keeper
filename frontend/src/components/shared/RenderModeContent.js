@@ -52,6 +52,7 @@ const RenderModeContent = memo(({
   onAddPendingFile,
   onRemovePendingFile,
   onPendingFileDescriptionChange,
+  onUploadPendingFiles,
 }) => {
   // Performance optimization: Early return for loading state
   if (loading && files.length === 0) {
@@ -136,6 +137,17 @@ const RenderModeContent = memo(({
           </Paper>
         ))}
       </Stack>
+      <Button
+        leftSection={<IconUpload size={16} />}
+        onClick={(e) => {
+          e.preventDefault();
+          onUploadPendingFiles();
+        }}
+        disabled={loading}
+        size="sm"
+      >
+        Upload {pendingFiles.length} File{pendingFiles.length !== 1 ? 's' : ''}
+      </Button>
     </Stack>
   );
 

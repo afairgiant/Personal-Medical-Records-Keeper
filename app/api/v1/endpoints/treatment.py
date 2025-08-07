@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.treatment import treatment
 from app.models.activity_log import EntityType
@@ -22,30 +23,11 @@ from app.schemas.treatment import (
 
 router = APIRouter()
 
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
 
-@router.post("/", response_model=TreatmentResponse)
-def create_treatment(
-    *,
-    treatment_in: TreatmentCreate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Create new treatment."""
-    return handle_create_with_logging(
-        db=db,
-        crud_obj=treatment,
-        obj_in=treatment_in,
-        entity_type=EntityType.TREATMENT,
-        user_id=current_user_id,
-        entity_name="Treatment",
-        request=request,
-    )
-
-
-# @router.get("/", response_model=List[TreatmentWithRelations])
-@router.get("/", response_model=List[TreatmentResponse])
-def read_treatments(
+# Custom list endpoint with status and condition_id filtering
+@router.get("/search", response_model=List[TreatmentResponse])
+def search_treatments(
     *,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
@@ -54,7 +36,7 @@ def read_treatments(
     status: Optional[str] = Query(None),
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
-    """Retrieve treatments for the current user or accessible patient."""
+    """Search treatments with filtering by status or condition_id."""
     
     # Filter treatments by the target patient_id
     if status:
@@ -81,64 +63,17 @@ def read_treatments(
     return treatments
 
 
-@router.get("/{treatment_id}", response_model=TreatmentWithRelations)
-def read_treatment(
+# Custom ongoing treatments endpoint (BEFORE standard endpoints)
+@router.get("/ongoing", response_model=List[TreatmentResponse])
+def get_ongoing_treatments(
     *,
     db: Session = Depends(deps.get_db),
-    treatment_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Get treatment by ID with related information - only allows access to user's own treatments."""
-    treatment_obj = treatment.get_with_relations(
-        db=db,
-        record_id=treatment_id,
-        relations=["patient", "practitioner", "condition"],
-    )
-    handle_not_found(treatment_obj, "Treatment")
-    verify_patient_ownership(treatment_obj, current_user_patient_id, "treatment")
-    return treatment_obj
-
-
-@router.put("/{treatment_id}", response_model=TreatmentResponse)
-def update_treatment(
-    *,
-    treatment_id: int,
-    treatment_in: TreatmentUpdate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
+    patient_id: Optional[int] = Query(None),
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Update a treatment."""
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=treatment,
-        entity_id=treatment_id,
-        obj_in=treatment_in,
-        entity_type=EntityType.TREATMENT,
-        user_id=current_user_id,
-        entity_name="Treatment",
-        request=request,
-    )
-
-
-@router.delete("/{treatment_id}")
-def delete_treatment(
-    *,
-    treatment_id: int,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Delete a treatment."""
-    return handle_delete_with_logging(
-        db=db,
-        crud_obj=treatment,
-        entity_id=treatment_id,
-        entity_type=EntityType.TREATMENT,
-        user_id=current_user_id,
-        entity_name="Treatment",
-        request=request,
-    )
+    """Get treatments that are currently ongoing."""
+    treatments = treatment.get_ongoing(db, patient_id=patient_id)
+    return treatments
 
 
 @router.get("/patient/{patient_id}/active", response_model=List[TreatmentResponse])
@@ -152,16 +87,20 @@ def get_active_treatments(
     return treatments
 
 
-@router.get("/ongoing", response_model=List[TreatmentResponse])
-def get_ongoing_treatments(
-    *,
-    db: Session = Depends(deps.get_db),
-    patient_id: Optional[int] = Query(None),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Get treatments that are currently ongoing."""
-    treatments = treatment.get_ongoing(db, patient_id=patient_id)
-    return treatments
+
+# Add standard CRUD endpoints AFTER custom endpoints
+# This creates: POST /, GET /, GET /{entity_id}, PUT /{entity_id}, DELETE /{entity_id}
+# The GET /{entity_id} will include condition relations per the response schema
+add_standard_endpoints(
+    router,
+    crud_obj=treatment,
+    entity_type=EntityType.TREATMENT,
+    entity_name="Treatment",
+    create_schema=TreatmentCreate,
+    update_schema=TreatmentUpdate,
+    response_schema=TreatmentResponse,
+    response_with_relations_schema=TreatmentWithRelations,
+)
 
 
 @router.get(

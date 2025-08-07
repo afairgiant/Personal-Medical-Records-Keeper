@@ -31,7 +31,7 @@ import StatusBadge from '../../components/medical/StatusBadge';
 import InsuranceCard from '../../components/medical/insurance/InsuranceCard';
 import InsuranceFormWrapper from '../../components/medical/insurance/InsuranceFormWrapper';
 import InsuranceViewModal from '../../components/medical/insurance/InsuranceViewModal';
-import DocumentManagerWithProgress from '../../components/shared/DocumentManagerWithProgress';
+import DocumentSection from '../../components/shared/DocumentSection';
 import FormLoadingOverlay from '../../components/shared/FormLoadingOverlay';
 import { useFormSubmissionWithUploads } from '../../hooks/useFormSubmissionWithUploads';
 import {
@@ -310,10 +310,8 @@ const Insurance = () => {
       // Use utility to restructure form data
       const submitData = restructureFormData(formData, insuranceFieldConfig);
       
-      // Only add patient_id for new insurance (create), not for updates
-      if (!editingInsurance) {
-        submitData.patient_id = currentPatient?.id;
-      }
+      // Add patient_id to the form data (like medication does)
+      submitData.patient_id = currentPatient.id;
 
       let success;
       let resultId;
@@ -339,6 +337,8 @@ const Insurance = () => {
         // Set flag to refresh after new insurance creation (but only after form submission, not uploads)
         if (success) {
           needsRefreshAfterSubmissionRef.current = true;
+          // Immediately refresh data to ensure new record appears
+          await refreshData();
         }
       }
 
@@ -702,31 +702,20 @@ const Insurance = () => {
           type={statusMessage?.type || 'loading'}
         />
         {/* File Management Section for Both Create and Edit Mode */}
-        <Paper withBorder p="md" mt="md">
-          <Title order={4} mb="md">
-            {editingInsurance ? 'Manage Files' : 'Add Files (Optional)'}
-          </Title>
-          <DocumentManagerWithProgress
-            entityType="insurance"
-            entityId={editingInsurance?.id}
-            mode={editingInsurance ? 'edit' : 'create'}
-            config={{
-              acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif', '.txt', '.csv', '.xml', '.json', '.doc', '.docx', '.xls', '.xlsx'],
-              maxSize: 10 * 1024 * 1024, // 10MB
-              maxFiles: 10
-            }}
-            onUploadPendingFiles={setDocumentManagerMethods}
-            onError={(error) => {
-              logger.error('document_manager_error', {
-                message: `Document manager error in insurance ${editingInsurance ? 'edit' : 'create'}`,
-                insuranceId: editingInsurance?.id,
-                error: error,
-                component: 'Insurance',
-              });
-            }}
-            showProgressModal={true}
-          />
-        </Paper>
+        <DocumentSection
+          entityType="insurance"
+          entityId={editingInsurance?.id}
+          mode={editingInsurance ? 'edit' : 'create'}
+          onUploadPendingFiles={setDocumentManagerMethods}
+          onError={(error) => {
+            logger.error('document_manager_error', {
+              message: `Document manager error in insurance ${editingInsurance ? 'edit' : 'create'}`,
+              insuranceId: editingInsurance?.id,
+              error: error,
+              component: 'Insurance',
+            });
+          }}
+        />
       </InsuranceFormWrapper>
 
       {/* View Modal */}

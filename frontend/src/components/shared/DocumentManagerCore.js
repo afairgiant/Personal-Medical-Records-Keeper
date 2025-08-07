@@ -145,7 +145,7 @@ const useDocumentManagerCore = ({
 
   // Performance optimization: Memoize expensive progress statistics
   const progressStats = useMemo(() => {
-    if (!uploadState.files || uploadState.files.length === 0) {
+    if (!uploadState || !uploadState.files || uploadState.files.length === 0) {
       return { completed: 0, failed: 0, uploading: 0, total: 0 };
     }
     
@@ -155,7 +155,7 @@ const useDocumentManagerCore = ({
     const total = uploadState.files.length;
     
     return { completed, failed, uploading, total };
-  }, [uploadState.files]);
+  }, [uploadState?.files]);
 
   // Performance optimization: Memoize file size calculations
   const fileStats = useMemo(() => {
@@ -184,14 +184,14 @@ const useDocumentManagerCore = ({
   // Performance optimization: Debounced progress update function
   // Only create in upload modes to prevent unnecessary function creation in view mode
   const debouncedUpdateProgress = useMemo(() => {
-    if (mode === 'view' && !uploadState.isUploading) {
+    if (mode === 'view' && !uploadState?.isUploading) {
       // Return a no-op function in view mode when not uploading
       return () => {};
     }
     return debounce((fileId, progress, status, error) => {
       updateFileProgress(fileId, progress, status, error);
     }, 150); // Increased debounce for better performance
-  }, [mode, uploadState.isUploading, updateFileProgress]);
+  }, [mode, uploadState?.isUploading, updateFileProgress]);
 
   // Rate limiting for logging
   const lastLogTimeRef = useRef(0);
@@ -862,13 +862,26 @@ const useDocumentManagerCore = ({
   }, [entityId, entityType, selectedStorageBackend, paperlessSettings, showProgressModal, startUpload, updateFileProgress, completeUpload, loadFiles, onError]);
 
   // Batch upload pending files with progress tracking
-  const uploadPendingFiles = useCallback(async targetEntityId => {
+  const uploadPendingFiles = useCallback(async (targetEntityId = null) => {
+    // Use the provided targetEntityId or fall back to the component's entityId
+    const effectiveEntityId = targetEntityId || entityId;
+    
+    if (!effectiveEntityId) {
+      logger.error('document_manager_upload_error', {
+        message: 'Cannot upload files: no entity ID provided',
+        entityType,
+        component: 'DocumentManagerCore',
+      });
+      setError('Cannot upload files: no entity ID provided');
+      return false;
+    }
+    
     const currentPendingFiles = pendingFilesRef.current;
 
     logger.info('document_manager_batch_upload_start', {
       message: 'Starting batch upload with progress tracking',
       entityType,
-      targetEntityId,
+      targetEntityId: effectiveEntityId,
       pendingFilesCount: currentPendingFiles.length,
       component: 'DocumentManagerCore',
     });
@@ -903,7 +916,7 @@ const useDocumentManagerCore = ({
         logger.info('document_manager_individual_batch_upload', {
           message: 'Starting individual file upload in batch',
           entityType,
-          targetEntityId,
+          targetEntityId: effectiveEntityId,
           fileName: pendingFile.file.name,
           selectedStorageBackend: currentStorageBackend,
           component: 'DocumentManagerCore',
@@ -914,7 +927,7 @@ const useDocumentManagerCore = ({
           logger.info('LAB_RESULTS_BATCH_UPLOAD_DEBUG', {
             message: 'Lab Results batch upload debug',
             entityType,
-            targetEntityId,
+            targetEntityId: effectiveEntityId,
             fileName: pendingFile.file.name,
             selectedStorageBackend: currentStorageBackend,
             paperlessSettings: currentPaperlessSettings ? {
@@ -934,7 +947,7 @@ const useDocumentManagerCore = ({
             logger.warn('LAB_RESULTS_BATCH_PAPERLESS_MISCONFIGURATION', {
               message: 'Lab Results Batch: Paperless is configured but upload going to local storage',
               entityType,
-              targetEntityId,
+              targetEntityId: effectiveEntityId,
               fileName: pendingFile.file.name,
               selectedStorageBackend: currentStorageBackend,
               paperlessConfigured: true,
@@ -963,7 +976,7 @@ const useDocumentManagerCore = ({
           // Use the new upload method with task monitoring
           const uploadResult = await apiService.uploadEntityFileWithTaskMonitoring(
             entityType,
-            targetEntityId,
+            effectiveEntityId,
             pendingFile.file,
             pendingFile.description,
             '',
@@ -1012,7 +1025,7 @@ const useDocumentManagerCore = ({
               logger.info('document_manager_batch_paperless_success', {
                 message: 'Individual Paperless file uploaded successfully in batch',
                 entityType,
-                targetEntityId,
+                targetEntityId: effectiveEntityId,
                 fileName: pendingFile.file.name,
                 documentId: result.documentId,
                 component: 'DocumentManagerCore',
@@ -1026,13 +1039,13 @@ const useDocumentManagerCore = ({
               logger.warn('document_manager_batch_paperless_duplicate', {
                 message: 'Duplicate document detected in batch upload',
                 entityType,
-                targetEntityId,
+                targetEntityId: effectiveEntityId,
                 fileName: pendingFile.file.name,
                 component: 'DocumentManagerCore',
               });
 
-              // Throw error to be caught and handled properly
-              throw new Error(result.message);
+              // Don't throw error for duplicates - they are expected and should not crash the batch
+              // The file will be marked as failed in the progress modal which is appropriate UX
             } else {
               // Mark as failed
               if (showProgressModal) {
@@ -1042,13 +1055,13 @@ const useDocumentManagerCore = ({
               logger.error('document_manager_batch_paperless_error', {
                 message: 'Individual Paperless file failed in batch upload',
                 entityType,
-                targetEntityId,
+                targetEntityId: effectiveEntityId,
                 fileName: pendingFile.file.name,
                 error: result.message,
                 component: 'DocumentManagerCore',
               });
 
-              throw new Error(result.message);
+              // Don't throw - let Promise.allSettled handle all results gracefully
             }
           } else {
             // Local storage or upload without task monitoring
@@ -1059,7 +1072,7 @@ const useDocumentManagerCore = ({
             logger.info('document_manager_batch_local_success', {
               message: 'Individual file uploaded successfully in batch (local storage)',
               entityType,
-              targetEntityId,
+              targetEntityId: effectiveEntityId,
               fileName: pendingFile.file.name,
               component: 'DocumentManagerCore',
             });
@@ -1093,23 +1106,31 @@ const useDocumentManagerCore = ({
         logger.error('document_manager_individual_batch_error', {
           message: 'Individual file upload failed in batch',
           entityType,
-          targetEntityId,
+          targetEntityId: effectiveEntityId,
           fileName: pendingFile.file.name,
           error: error.message,
           enhancedError: errorMessage,
           component: 'DocumentManagerCore',
         });
 
-        throw new Error(errorMessage);
+        // Don't throw - let Promise.allSettled handle all results gracefully
       }
     });
 
     try {
-      await Promise.all(uploadPromises);
+      await Promise.allSettled(uploadPromises);
 
-      // Complete successfully
+      // Check actual results from progress tracking
+      const completedCount = uploadState?.files?.filter(f => f.status === 'completed').length || 0;
+      const failedCount = uploadState?.files?.filter(f => f.status === 'failed').length || 0;
+      const allSuccessful = failedCount === 0 && completedCount === currentPendingFiles.length;
+
       if (showProgressModal) {
-        completeUpload(true, `All ${currentPendingFiles.length} file(s) uploaded successfully!`);
+        if (allSuccessful) {
+          completeUpload(true, `All ${currentPendingFiles.length} file(s) uploaded successfully!`);
+        } else {
+          completeUpload(false, `Upload completed: ${completedCount} succeeded, ${failedCount} failed.`);
+        }
       }
 
       monitoredSetPendingFiles([]);
@@ -1118,50 +1139,48 @@ const useDocumentManagerCore = ({
       await loadFiles();
 
       if (onUploadComplete) {
-        onUploadComplete(true, currentPendingFiles.length, 0);
+        onUploadComplete(allSuccessful, completedCount, failedCount);
       }
 
       logger.info('document_manager_batch_upload_complete', {
-        message: 'Batch upload completed successfully',
+        message: allSuccessful ? 'Batch upload completed successfully' : 'Batch upload completed with mixed results',
         entityType,
-        targetEntityId,
+        targetEntityId: effectiveEntityId,
         fileCount: currentPendingFiles.length,
+        completedCount,
+        failedCount,
         component: 'DocumentManagerCore',
       });
 
-      return true;
+      return allSuccessful;
     } catch (error) {
-      // Some files failed
-      const completedCount = uploadState.files.filter(f => f.status === 'completed').length;
-      const failedCount = uploadState.files.filter(f => f.status === 'failed').length;
-
-      if (showProgressModal) {
-        completeUpload(false, `Upload completed with errors: ${completedCount} succeeded, ${failedCount} failed.`);
-      }
-
-      if (onUploadComplete) {
-        onUploadComplete(false, completedCount, failedCount);
-      }
-
-      logger.error('document_manager_batch_upload_failed', {
-        message: 'Batch upload completed with errors',
+      // This should rarely happen since we use Promise.allSettled, but handle unexpected errors
+      logger.error('document_manager_batch_upload_unexpected_error', {
+        message: 'Unexpected error during batch upload',
         entityType,
-        targetEntityId,
-        completedCount,
-        failedCount,
+        targetEntityId: effectiveEntityId,
         error: error.message,
         component: 'DocumentManagerCore',
       });
 
-      throw error;
+      if (showProgressModal) {
+        completeUpload(false, `Upload failed: ${error.message}`);
+      }
+
+      if (onUploadComplete) {
+        onUploadComplete(false, 0, currentPendingFiles.length);
+      }
+
+      return false;
     }
   }, [
     entityType,
+    entityId,
     showProgressModal,
     startUpload,
     updateFileProgress,
     completeUpload,
-    uploadState.files,
+    uploadState?.files,
     loadFiles,
     onUploadComplete,
   ]);

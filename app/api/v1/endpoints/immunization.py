@@ -23,21 +23,9 @@ from app.schemas.immunization import (
 
 router = APIRouter()
 
-# Add standard CRUD endpoints  
-add_standard_endpoints(
-    router,
-    crud_obj=immunization,
-    entity_type=EntityType.IMMUNIZATION,
-    entity_name="Immunization",
-    create_schema=ImmunizationCreate,
-    update_schema=ImmunizationUpdate,
-    response_schema=ImmunizationResponse,
-    response_with_relations_schema=ImmunizationWithRelations,
-)
-
-# Override the standard list endpoint to support custom filtering
-@router.get("/", response_model=List[ImmunizationResponse])
-def read_immunizations(
+# Custom search endpoint with vaccine name filtering (preserves original functionality)
+@router.get("/search", response_model=List[ImmunizationResponse])
+def search_immunizations(
     *,
     db: Session = Depends(deps.get_db),
     skip: int = 0,
@@ -45,7 +33,7 @@ def read_immunizations(
     vaccine_name: Optional[str] = Query(None),
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
-    """Retrieve immunizations for the current user or accessible patient."""
+    """Search immunizations with filtering by vaccine name."""
     
     # Filter immunizations by the target patient_id
     if vaccine_name:
@@ -58,21 +46,18 @@ def read_immunizations(
         )
     return immunizations
 
-# Override the standard get endpoint to include practitioner relations
-@router.get("/{immunization_id}", response_model=ImmunizationWithRelations)
-def read_immunization(
-    *,
-    db: Session = Depends(deps.get_db),
-    immunization_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """Get immunization by ID with related information - only allows access to user's own immunizations."""
-    immunization_obj = immunization.get_with_relations(
-        db=db, record_id=immunization_id, relations=["patient", "practitioner"]
-    )
-    handle_not_found(immunization_obj, "Immunization")
-    verify_patient_ownership(immunization_obj, current_user_patient_id, "immunization")
-    return immunization_obj
+# Add standard CRUD endpoints AFTER custom endpoints to avoid conflicts  
+# The GET /{entity_id} will include practitioner relations per the response schema
+add_standard_endpoints(
+    router,
+    crud_obj=immunization,
+    entity_type=EntityType.IMMUNIZATION,
+    entity_name="Immunization",
+    create_schema=ImmunizationCreate,
+    update_schema=ImmunizationUpdate,
+    response_schema=ImmunizationResponse,
+    response_with_relations_schema=ImmunizationWithRelations,
+)
 
 
 @router.get("/patient/{patient_id}/recent", response_model=List[ImmunizationResponse])

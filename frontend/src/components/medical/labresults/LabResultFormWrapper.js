@@ -1,7 +1,6 @@
 import React from 'react';
-import { Paper, Title } from '@mantine/core';
 import MantineLabResultForm from '../MantineLabResultForm';
-import DocumentManagerWithProgress from '../../shared/DocumentManagerWithProgress';
+import DocumentSection from '../../shared/DocumentSection';
 import logger from '../../../services/logger';
 
 const LabResultFormWrapper = ({
@@ -15,20 +14,15 @@ const LabResultFormWrapper = ({
   practitioners,
   isLoading,
   statusMessage,
-  onDocumentManagerRef,
   onFileUploadComplete,
   conditions,
   labResultConditions,
   fetchLabResultConditions,
   navigate,
+  currentPatient,
   onError,
   children
 }) => {
-  const handleDocumentManagerRef = (methods) => {
-    if (onDocumentManagerRef) {
-      onDocumentManagerRef(methods);
-    }
-  };
 
   const handleDocumentError = (error) => {
     logger.error('document_manager_error', {
@@ -72,29 +66,20 @@ const LabResultFormWrapper = ({
       labResultConditions={labResultConditions}
       fetchLabResultConditions={fetchLabResultConditions}
       navigate={navigate}
+      currentPatient={currentPatient}
       isLoading={isLoading}
       statusMessage={statusMessage}
     >
-      {/* File Management Section for Both Create and Edit Mode */}
-      <Paper withBorder p="md" mt="md">
-        <Title order={4} mb="md">
-          {editingItem ? 'Manage Files' : 'Add Files (Optional)'}
-        </Title>
-        <DocumentManagerWithProgress
+      {/* Document Management Section - Copied EXACTLY from view modal */}
+      {editingItem && (
+        <DocumentSection
           entityType="lab-result"
-          entityId={editingItem?.id}
-          mode={editingItem ? 'edit' : 'create'}
-          config={{
-            acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif', '.txt', '.csv', '.xml', '.json', '.doc', '.docx', '.xls', '.xlsx'],
-            maxSize: 10 * 1024 * 1024, // 10MB
-            maxFiles: 10
-          }}
-          onUploadPendingFiles={handleDocumentManagerRef}
-          showProgressModal={true}
+          entityId={editingItem.id}
+          mode="edit"
           onUploadComplete={handleDocumentUploadComplete}
           onError={handleDocumentError}
         />
-      </Paper>
+      )}
       
       {children}
     </MantineLabResultForm>

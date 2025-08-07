@@ -12,7 +12,7 @@ import {
   Grid
 } from '@mantine/core';
 import StatusBadge from '../StatusBadge';
-import DocumentManagerWithProgress from '../../shared/DocumentManagerWithProgress';
+import DocumentSection from '../../shared/DocumentSection';
 import { formatDate } from '../../../utils/helpers';
 import { navigateToEntity } from '../../../utils/linkNavigation';
 import logger from '../../../services/logger';
@@ -309,27 +309,13 @@ const ProcedureViewModal = ({
           </Card>
 
           {/* Document Management */}
-          <Card withBorder p="md">
-            <Stack gap="sm">
-              <Text fw={600} size="sm" c="dimmed">
-                ATTACHED DOCUMENTS
-              </Text>
-              <Divider />
-              <DocumentManagerWithProgress
-                entityType="procedure"
-                entityId={procedure.id}
-                mode="view"
-                config={{
-                  acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif', '.txt', '.csv', '.xml', '.json', '.doc', '.docx', '.xls', '.xlsx'],
-                  maxSize: 10 * 1024 * 1024, // 10MB
-                  maxFiles: 10
-                }}
-                showProgressModal={true}
-                onUploadComplete={handleDocumentUploadComplete}
-                onError={handleDocumentError}
-              />
-            </Stack>
-          </Card>
+          <DocumentSection
+            entityType="procedure"
+            entityId={procedure.id}
+            mode="view"
+            onUploadComplete={handleDocumentUploadComplete}
+            onError={handleDocumentError}
+          />
 
           {/* Action Buttons */}
           <Group justify="flex-end" mt="md">

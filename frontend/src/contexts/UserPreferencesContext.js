@@ -74,14 +74,14 @@ export const UserPreferencesProvider = ({ children }) => {
 
     // Only load preferences if user is authenticated
     if (isAuthenticated && user) {
+      // Always fetch fresh preferences from database on login
       loadPreferences();
     } else {
-      // Clear preferences when not authenticated
-      setPreferences(null);
+      // On logout, don't clear preferences - just stop loading
       setLoading(false);
       setError(null);
 
-      frontendLogger.logInfo('User logged out, clearing preferences', {
+      frontendLogger.logInfo('User logged out, preferences preserved for UI consistency', {
         component: 'UserPreferencesContext',
       });
     }

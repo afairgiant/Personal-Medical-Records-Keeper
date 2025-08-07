@@ -19,7 +19,7 @@ class TestEmergencyContactAPI:
         patient_data = PatientCreate(
             first_name="John",
             last_name="Doe",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M",
             address="123 Main St"
         )

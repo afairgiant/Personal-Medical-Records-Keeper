@@ -21,7 +21,7 @@ class TestProceduresAPI:
         patient_data = PatientCreate(
             first_name="John",
             last_name="Doe",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M",
             address="123 Main St"
         )
@@ -409,7 +409,7 @@ class TestProceduresAPI:
         patient1_data = PatientCreate(
             first_name="User",
             last_name="One",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M"
         )
         patient1 = patient_crud.create_for_user(
@@ -421,7 +421,7 @@ class TestProceduresAPI:
         patient2_data = PatientCreate(
             first_name="User",
             last_name="Two",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="F"
         )
         patient2 = patient_crud.create_for_user(

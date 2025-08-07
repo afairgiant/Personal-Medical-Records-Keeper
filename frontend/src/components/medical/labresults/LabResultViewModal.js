@@ -9,10 +9,13 @@ import {
   Group,
   Button,
   ScrollArea,
+  Card,
+  Divider,
+  Badge,
 } from '@mantine/core';
 import StatusBadge from '../StatusBadge';
 import ConditionRelationships from '../ConditionRelationships';
-import DocumentManagerWithProgress from '../../shared/DocumentManagerWithProgress';
+import DocumentSection from '../../shared/DocumentSection';
 import { formatDate } from '../../../utils/helpers';
 import logger from '../../../services/logger';
 
@@ -27,6 +30,7 @@ const LabResultViewModal = ({
   labResultConditions,
   fetchLabResultConditions,
   navigate,
+  currentPatient,
   isBlocking,
   onError
 }) => {
@@ -44,6 +48,16 @@ const LabResultViewModal = ({
   };
 
   const handleDocumentError = (error) => {
+    logger.error('lab_result_document_error_details', {
+      message: 'Detailed document manager error in lab result view modal',
+      labResultId: labResult?.id,
+      error: error,
+      errorMessage: error?.message,
+      errorStack: error?.stack,
+      errorDetails: error?.details,
+      errorResponse: error?.response,
+      component: 'LabResultViewModal',
+    });
     handleError(error, 'document_manager');
   };
 
@@ -183,28 +197,20 @@ const LabResultViewModal = ({
                 conditions={conditions}
                 fetchLabResultConditions={fetchLabResultConditions}
                 navigate={navigate}
+                currentPatient={currentPatient}
                 isViewMode={true}
               />
             </div>
           )}
 
           {/* Document Management Section */}
-          <div>
-            <Title order={4} mb="sm">Associated Files</Title>
-            <DocumentManagerWithProgress
-              entityType="lab-result"
-              entityId={labResult.id}
-              mode="view"
-              config={{
-                acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif', '.txt', '.csv', '.xml', '.json', '.doc', '.docx', '.xls', '.xlsx'],
-                maxSize: 10 * 1024 * 1024, // 10MB
-                maxFiles: 10
-              }}
-              onUploadComplete={onFileUploadComplete}
-              onError={handleDocumentError}
-              showProgressModal={true}
-            />
-          </div>
+          <DocumentSection
+            entityType="lab-result"
+            entityId={labResult.id}
+            mode="view"
+            onUploadComplete={onFileUploadComplete}
+            onError={handleDocumentError}
+          />
 
           {/* Action Buttons */}
           <Group justify="space-between" mt="md">

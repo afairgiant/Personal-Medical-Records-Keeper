@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.crud.patient import patient as patient_crud
 from app.schemas.patient import PatientCreate
-from tests.utils.user import create_random_user, create_user_token_headers
+from tests.utils.user import create_random_user, create_token_headers_for_user
 
 
 class TestAllergiesAPI:
@@ -21,7 +21,7 @@ class TestAllergiesAPI:
         patient_data = PatientCreate(
             first_name="John",
             last_name="Doe",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M",
             address="123 Main St"
         )
@@ -33,7 +33,7 @@ class TestAllergiesAPI:
     @pytest.fixture
     def authenticated_headers(self, user_with_patient):
         """Create authentication headers."""
-        return create_user_token_headers(user_with_patient["user"].id)
+        return create_token_headers_for_user(user_with_patient["user"])
 
     def test_create_allergy_success(self, client: TestClient, user_with_patient, authenticated_headers):
         """Test successful allergy creation."""
@@ -41,7 +41,7 @@ class TestAllergiesAPI:
             "allergen": "Penicillin",
             "severity": "severe",
             "reaction": "Anaphylaxis, difficulty breathing, hives",
-            "onset_date": date(2023, 5, 15),
+            "onset_date": "2023-05-15",
             "status": "active",
             "notes": "Confirmed by allergist Dr. Smith",
             "treatment": "Epinephrine auto-injector prescribed"
@@ -67,7 +67,7 @@ class TestAllergiesAPI:
             "allergen": "Peanuts",
             "severity": "life-threatening",
             "reaction": "Severe anaphylaxis within minutes",
-            "onset_date": date(2020, 3, 10),
+            "onset_date": "2020-03-10",
             "status": "active",
             "notes": "Patient carries EpiPen at all times",
             "verified_by": "Emergency Department - City Hospital"
@@ -93,21 +93,21 @@ class TestAllergiesAPI:
                 "allergen": "Penicillin",
                 "severity": "severe",
                 "reaction": "Rash, swelling",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Shellfish",
                 "severity": "moderate",
                 "reaction": "Hives, stomach upset",
-                "onset_date": date(2022, 8, 20),
+                "onset_date": "2022-08-20",
                 "status": "active"
             },
             {
                 "allergen": "Latex",
                 "severity": "mild",
                 "reaction": "Contact dermatitis",
-                "onset_date": date(2021, 6, 10),
+                "onset_date": "2021-06-10",
                 "status": "inactive"
             }
         ]
@@ -140,14 +140,14 @@ class TestAllergiesAPI:
                 "allergen": "Active Allergen",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Inactive Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": date(2022, 1, 15),
+                "onset_date": "2022-01-15",
                 "status": "inactive"
             }
         ]
@@ -182,21 +182,21 @@ class TestAllergiesAPI:
                 "allergen": "Life Threatening Drug",
                 "severity": "life-threatening",
                 "reaction": "Anaphylaxis",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Severe Drug",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Mild Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             }
         ]
@@ -236,7 +236,7 @@ class TestAllergiesAPI:
             "allergen": "Sulfa Drugs",
             "severity": "moderate",
             "reaction": "Skin rash, nausea",
-            "onset_date": date(2023, 1, 15),
+            "onset_date": "2023-01-15",
             "status": "active",
             "notes": "Reaction occurred during antibiotic treatment"
         }
@@ -268,7 +268,7 @@ class TestAllergiesAPI:
             "allergen": "Iodine",
             "severity": "moderate",
             "reaction": "Rash",
-            "onset_date": date(2023, 1, 15),
+            "onset_date": "2023-01-15",
             "status": "active"
         }
 
@@ -308,7 +308,7 @@ class TestAllergiesAPI:
             "allergen": "Temporary Allergen",
             "severity": "mild",
             "reaction": "Mild rash",
-            "onset_date": date(2023, 1, 15),
+            "onset_date": "2023-01-15",
             "status": "active"
         }
 
@@ -343,7 +343,7 @@ class TestAllergiesAPI:
             "allergen": "Test Allergen to Delete",
             "severity": "mild",
             "reaction": "Test reaction",
-            "onset_date": date(2023, 1, 15),
+            "onset_date": "2023-01-15",
             "status": "active"
         }
 
@@ -378,21 +378,21 @@ class TestAllergiesAPI:
                 "allergen": "Penicillin G",
                 "severity": "severe",
                 "reaction": "Anaphylaxis",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Amoxicillin",
                 "severity": "moderate",
                 "reaction": "Rash",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Shellfish",
                 "severity": "mild",
                 "reaction": "Stomach upset",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             }
         ]
@@ -428,32 +428,32 @@ class TestAllergiesAPI:
         patient1_data = PatientCreate(
             first_name="User",
             last_name="One",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M"
         )
         patient1 = patient_crud.create_for_user(
             db_session, user_id=user1_data["user"].id, patient_data=patient1_data
         )
-        headers1 = create_user_token_headers(user1_data["user"].id)
+        headers1 = create_token_headers_for_user(user1_data["user"])
 
         user2_data = create_random_user(db_session)
         patient2_data = PatientCreate(
             first_name="User",
             last_name="Two",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="F"
         )
         patient2 = patient_crud.create_for_user(
             db_session, user_id=user2_data["user"].id, patient_data=patient2_data
         )
-        headers2 = create_user_token_headers(user2_data["user"].id)
+        headers2 = create_token_headers_for_user(user2_data["user"])
 
         # User1 creates an allergy
         allergy_data = {
             "allergen": "Private Allergen",
             "severity": "severe",
             "reaction": "Confidential reaction",
-            "onset_date": date(2023, 1, 15),
+            "onset_date": "2023-01-15",
             "status": "active"
         }
 
@@ -552,21 +552,21 @@ class TestAllergiesAPI:
                 "allergen": "Mild Allergen",
                 "severity": "mild",
                 "reaction": "Mild reaction",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Life Threatening Allergen",
                 "severity": "life-threatening",
                 "reaction": "Anaphylaxis",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             },
             {
                 "allergen": "Severe Allergen",
                 "severity": "severe",
                 "reaction": "Severe reaction",
-                "onset_date": date(2023, 1, 15),
+                "onset_date": "2023-01-15",
                 "status": "active"
             }
         ]

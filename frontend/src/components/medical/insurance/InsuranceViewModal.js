@@ -17,7 +17,7 @@ import { formatDate } from '../../../utils/helpers';
 import { formatPhoneNumber, cleanPhoneNumber, isPhoneField } from '../../../utils/phoneUtils';
 import { formatFieldLabel, formatFieldValue } from '../../../utils/fieldFormatters';
 import StatusBadge from '../StatusBadge';
-import DocumentManagerWithProgress from '../../shared/DocumentManagerWithProgress';
+import DocumentSection from '../../shared/DocumentSection';
 
 const InsuranceViewModal = ({ 
   isOpen, 
@@ -213,28 +213,19 @@ const InsuranceViewModal = ({
         )}
 
         {/* Document Management */}
-        <div>
-          <Title order={4} mb="sm">Attached Documents</Title>
-          <DocumentManagerWithProgress
-            entityType="insurance"
-            entityId={insurance.id}
-            mode="view"
-            config={{
-              acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif', '.txt', '.csv', '.xml', '.json', '.doc', '.docx', '.xls', '.xlsx'],
-              maxSize: 10 * 1024 * 1024, // 10MB
-              maxFiles: 10
-            }}
-            onUploadComplete={(success, completedCount, failedCount) => {
-              if (onFileUploadComplete) {
-                onFileUploadComplete(success);
-              }
-            }}
-            onError={(error) => {
-              console.error('Document manager error in insurance view:', error);
-            }}
-            showProgressModal={true}
-          />
-        </div>
+        <DocumentSection
+          entityType="insurance"
+          entityId={insurance.id}
+          mode="view"
+          onUploadComplete={(success, completedCount, failedCount) => {
+            if (onFileUploadComplete) {
+              onFileUploadComplete(success);
+            }
+          }}
+          onError={(error) => {
+            console.error('Document manager error in insurance view:', error);
+          }}
+        />
 
         {/* Action Buttons */}
         <Divider />

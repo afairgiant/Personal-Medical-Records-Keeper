@@ -19,6 +19,7 @@ const MantineLabResultForm = ({
   labResultConditions = {},
   fetchLabResultConditions,
   navigate,
+  currentPatient,
 }) => {
   // Status options with visual indicators
   const statusOptions = [
@@ -167,6 +168,7 @@ const MantineLabResultForm = ({
                 conditions={conditions}
                 fetchLabResultConditions={fetchLabResultConditions}
                 navigate={navigate}
+                currentPatient={currentPatient}
               />
             </Stack>
           </Paper>

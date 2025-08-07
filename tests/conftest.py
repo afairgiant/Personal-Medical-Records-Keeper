@@ -30,16 +30,12 @@ from tests.utils.user import create_random_user, create_user_authentication_head
 # Test database setup
 @pytest.fixture(scope="session")
 def test_db_engine():
-    """Create a test database engine using SQLite in memory."""
-    # Use SQLite in-memory database for tests
-    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+    """Create a test database engine using PostgreSQL from Docker stack."""
+    # Use PostgreSQL from Docker stack (port 5433 as configured in docker-compose.yml)
+    SQLALCHEMY_DATABASE_URL = "postgresql://medapp:your_secure_database_password_here@localhost:5433/medical_records"
     
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
-        connect_args={
-            "check_same_thread": False,
-        },
-        poolclass=StaticPool,
         echo=False,  # Set to True for SQL debugging
     )
     
@@ -124,7 +120,7 @@ def test_patient(db_session: Session, test_user: User) -> Patient:
     patient_data = PatientCreate(
         first_name="Test",
         last_name="User",
-        birth_date=date(1990, 1, 1),
+        birth_date="1990-01-01",
         gender="M",
         address="123 Test St"
     )
@@ -138,14 +134,14 @@ def test_patient(db_session: Session, test_user: User) -> Patient:
 @pytest.fixture(scope="function")
 def user_token_headers(test_user: User) -> dict[str, str]:
     """Create authentication headers for test user."""
-    access_token = create_access_token(subject=test_user.id)
+    access_token = create_access_token(data={"sub": test_user.username})
     return {"Authorization": f"Bearer {access_token}"}
 
 
 @pytest.fixture(scope="function")
 def admin_token_headers(test_admin_user: User) -> dict[str, str]:
     """Create authentication headers for admin user."""
-    access_token = create_access_token(subject=test_admin_user.id)
+    access_token = create_access_token(data={"sub": test_admin_user.username})
     return {"Authorization": f"Bearer {access_token}"}
 
 
@@ -251,15 +247,18 @@ def sample_vitals_data():
 def setup_test_environment():
     """Setup test environment variables."""
     os.environ["TESTING"] = "1"
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+    os.environ["DATABASE_URL"] = "postgresql://medapp:your_secure_database_password_here@localhost:5433/medical_records"
     os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
     os.environ["LOG_LEVEL"] = "WARNING"  # Reduce log noise in tests
+    os.environ["SKIP_MIGRATIONS"] = "true"  # Skip database migrations in tests
     
     yield
     
     # Cleanup
-    if "TESTING" in os.environ:
-        del os.environ["TESTING"]
+    test_env_vars = ["TESTING", "DATABASE_URL", "SECRET_KEY", "LOG_LEVEL", "SKIP_MIGRATIONS"]
+    for var in test_env_vars:
+        if var in os.environ:
+            del os.environ[var]
 
 
 # File handling fixtures

@@ -31,7 +31,7 @@ class TestVitalsAPI:
         patient_data = PatientCreate(
             first_name="John",
             last_name="Doe",
-            birth_date=date(1990, 1, 1),
+            birth_date="1990-01-01",
             gender="M",
             address="123 Main St"
         )
@@ -49,7 +49,7 @@ class TestVitalsAPI:
         vitals_data = {
             "patient_id": patient.id,
             "practitioner_id": practitioner.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": 120,
             "diastolic_bp": 80,
             "heart_rate": 72,
@@ -88,7 +88,7 @@ class TestVitalsAPI:
             {
                 "patient_id": patient.id,
                 "practitioner_id": practitioner.id,
-                "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+                "recorded_date": "2024-01-15T10:30:00",
                 "systolic_bp": 120,
                 "diastolic_bp": 80,
                 "heart_rate": 72,
@@ -97,7 +97,7 @@ class TestVitalsAPI:
             {
                 "patient_id": patient.id,
                 "practitioner_id": practitioner.id,
-                "recorded_date": datetime(2024, 1, 20, 14, 15, 0),
+                "recorded_date": "2024-01-20T14:15:00",
                 "systolic_bp": 125,
                 "diastolic_bp": 82,
                 "heart_rate": 75,
@@ -173,7 +173,7 @@ class TestVitalsAPI:
         vitals_data = {
             "patient_id": patient.id,
             "practitioner_id": practitioner.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": 120,
             "diastolic_bp": 80,
             "heart_rate": 72,
@@ -211,7 +211,7 @@ class TestVitalsAPI:
         vitals_data = {
             "patient_id": patient.id,
             "practitioner_id": practitioner.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": 120,
             "diastolic_bp": 80
         }
@@ -238,7 +238,7 @@ class TestVitalsAPI:
         vitals_data = {
             "patient_id": patient.id,
             "practitioner_id": practitioner.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": 120,
             "diastolic_bp": 80,
             "heart_rate": 72,
@@ -277,7 +277,7 @@ class TestVitalsAPI:
         # Test invalid blood pressure values
         invalid_bp_vitals = {
             "patient_id": patient.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": -10,  # Invalid negative value
             "diastolic_bp": 300   # Unrealistic high value
         }
@@ -294,7 +294,7 @@ class TestVitalsAPI:
         vitals_data = {
             "patient_id": patient.id,
             "practitioner_id": practitioner.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "weight": 180.0,  # pounds
             "height": 70.0,   # inches
             "bmi": 25.8       # Should match calculated BMI
@@ -318,7 +318,7 @@ class TestVitalsAPI:
             {
                 "patient_id": patient.id,
                 "practitioner_id": practitioner.id,
-                "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+                "recorded_date": "2024-01-15T10:30:00",
                 "systolic_bp": 140,  # High
                 "diastolic_bp": 90,
                 "location": "clinic"
@@ -326,7 +326,7 @@ class TestVitalsAPI:
             {
                 "patient_id": patient.id,
                 "practitioner_id": practitioner.id,
-                "recorded_date": datetime(2024, 1, 20, 14, 15, 0),
+                "recorded_date": "2024-01-20T14:15:00",
                 "systolic_bp": 118,  # Normal
                 "diastolic_bp": 78,
                 "location": "home"
@@ -357,7 +357,7 @@ class TestVitalsAPI:
         # Test creating vitals without auth
         vitals_data = {
             "patient_id": patient.id,
-            "recorded_date": datetime(2024, 1, 15, 10, 30, 0),
+            "recorded_date": "2024-01-15T10:30:00",
             "systolic_bp": 120,
             "diastolic_bp": 80
         }

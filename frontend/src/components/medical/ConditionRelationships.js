@@ -32,6 +32,7 @@ const ConditionRelationships = ({
   conditions = [],
   fetchLabResultConditions,
   navigate,
+  currentPatient,
   isViewMode = false, // New prop to distinguish between view and edit modes
 }) => {
   const [relationships, setRelationships] = useState([]);
@@ -71,7 +72,7 @@ const ConditionRelationships = ({
         lab_result_id: labResultId,
         condition_id: parseInt(newRelationship.condition_id),
         relevance_note: newRelationship.relevance_note || null,
-      });
+      }, null, currentPatient?.id);
 
       // Refresh relationships
       if (fetchLabResultConditions) {

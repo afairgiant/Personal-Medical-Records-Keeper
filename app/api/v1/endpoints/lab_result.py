@@ -48,19 +48,9 @@ from app.schemas.lab_result_file import LabResultFileCreate, LabResultFileRespon
 
 router = APIRouter()
 
-# Add standard CRUD endpoints with custom delete override
-add_standard_endpoints(
-    router,
-    crud_obj=lab_result,
-    entity_type=EntityType.LAB_RESULT,
-    entity_name="Lab result",
-    create_schema=LabResultCreate,
-    update_schema=LabResultUpdate,
-    response_schema=LabResultResponse,
-    response_with_relations_schema=LabResultWithRelations,
-)
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
 
-# Override the standard list endpoint with custom response formatting
+# Custom list endpoint with special response formatting
 @router.get("/", response_model=List[LabResultWithRelations])
 def get_lab_results(
     *,
@@ -113,7 +103,7 @@ def get_lab_results(
 
     return response_results
 
-# Override the standard get endpoint with custom response formatting
+# Custom GET by ID with special response formatting
 @router.get("/{lab_result_id}", response_model=LabResultWithRelations)
 def get_lab_result(
     *,
@@ -160,7 +150,50 @@ def get_lab_result(
 
     return result_dict
 
-# Override the standard delete endpoint with custom file handling logic
+# Custom CREATE with special response formatting  
+@router.post("/", response_model=LabResultWithRelations)
+def create_lab_result(
+    *,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    obj_in: LabResultCreate,
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> LabResultWithRelations:
+    """Create new lab result record."""
+    lab_result_obj = handle_create_with_logging(
+        db=db, crud_obj=lab_result, obj_in=obj_in,
+        entity_type=EntityType.LAB_RESULT, user_id=current_user_id,
+        entity_name="Lab result", request=request
+    )
+    
+    # Return with relationships loaded and formatted
+    return lab_result.get_with_relations(
+        db=db, record_id=lab_result_obj.id, relations=["patient", "practitioner"]
+    )
+
+# Custom UPDATE with special response formatting
+@router.put("/{lab_result_id}", response_model=LabResultWithRelations)
+def update_lab_result(
+    *,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    lab_result_id: int,
+    obj_in: LabResultUpdate,
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> LabResultWithRelations:
+    """Update a lab result record."""
+    updated_lab_result = handle_update_with_logging(
+        db=db, crud_obj=lab_result, entity_id=lab_result_id, obj_in=obj_in,
+        entity_type=EntityType.LAB_RESULT, user_id=current_user_id,
+        entity_name="Lab result", request=request
+    )
+    
+    # Return with relationships loaded and formatted
+    return lab_result.get_with_relations(
+        db=db, record_id=lab_result_id, relations=["patient", "practitioner"]
+    )
+
+# Custom DELETE with file handling logic
 @router.delete("/{lab_result_id}")
 def delete_lab_result(
     *,
@@ -219,6 +252,9 @@ def delete_lab_result(
         raise HTTPException(
             status_code=400, detail=f"Error deleting lab result: {str(e)}"
         )
+
+# NOTE: Lab results require custom CRUD endpoints due to special response formatting and file handling
+# Cannot use add_standard_endpoints() due to complex response transformation needs
 
 
 # Patient-specific endpoints
@@ -562,14 +598,14 @@ def create_lab_result_condition(
     lab_result_id: int,
     condition_in: LabResultConditionCreate,
     db: Session = Depends(get_db),
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+    target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ):
     """Create a new lab result condition relationship."""
     # Verify lab result exists and belongs to user
     db_lab_result = lab_result.get(db, id=lab_result_id)
     handle_not_found(db_lab_result, "Lab result")
 
-    if db_lab_result.patient_id != current_user_patient_id:
+    if db_lab_result.patient_id != target_patient_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this lab result",
@@ -580,7 +616,7 @@ def create_lab_result_condition(
     handle_not_found(db_condition, "Condition")
 
     # Ensure condition belongs to the same patient as the lab result
-    if db_condition.patient_id != current_user_patient_id:
+    if db_condition.patient_id != target_patient_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot link condition that doesn't belong to the same patient",
@@ -614,14 +650,14 @@ def update_lab_result_condition(
     relationship_id: int,
     condition_in: LabResultConditionUpdate,
     db: Session = Depends(get_db),
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+    target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ):
     """Update a lab result condition relationship."""
     # Verify lab result exists and belongs to user
     db_lab_result = lab_result.get(db, id=lab_result_id)
     handle_not_found(db_lab_result, "Lab result")
 
-    if db_lab_result.patient_id != current_user_patient_id:
+    if db_lab_result.patient_id != target_patient_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this lab result",
@@ -650,14 +686,14 @@ def delete_lab_result_condition(
     lab_result_id: int,
     relationship_id: int,
     db: Session = Depends(get_db),
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
+    target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ):
     """Delete a lab result condition relationship."""
     # Verify lab result exists and belongs to user
     db_lab_result = lab_result.get(db, id=lab_result_id)
     handle_not_found(db_lab_result, "Lab result")
 
-    if db_lab_result.patient_id != current_user_patient_id:
+    if db_lab_result.patient_id != target_patient_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this lab result",

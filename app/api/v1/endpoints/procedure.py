@@ -20,21 +20,9 @@ from app.schemas.procedure import (
 
 router = APIRouter()
 
-# Add standard CRUD endpoints
-add_standard_endpoints(
-    router,
-    crud_obj=procedure,
-    entity_type=EntityType.PROCEDURE,
-    entity_name="Procedure",
-    create_schema=ProcedureCreate,
-    update_schema=ProcedureUpdate,
-    response_schema=ProcedureResponse,
-    response_with_relations_schema=ProcedureWithRelations,
-)
-
-# Override the standard list endpoint to support custom filtering
-@router.get("/", response_model=List[ProcedureResponse])
-def read_procedures(
+# Custom search endpoint with practitioner and status filtering  
+@router.get("/search", response_model=List[ProcedureResponse])
+def search_procedures(
     db: Session = Depends(deps.get_db),
     skip: int = 0,
     limit: int = Query(default=100, le=100),
@@ -43,7 +31,7 @@ def read_procedures(
     target_patient_id: int = Depends(deps.get_accessible_patient_id),
 ) -> Any:
     """
-    Retrieve procedures for the current user or accessible patient.
+    Search procedures with filtering by practitioner and status.
     """
     
     # Filter procedures by the target patient_id
@@ -65,24 +53,6 @@ def read_procedures(
         )
     return procedures
 
-# Override the standard get endpoint to include all necessary relations
-@router.get("/{procedure_id}", response_model=ProcedureWithRelations)
-def read_procedure(
-    *,
-    db: Session = Depends(deps.get_db),
-    procedure_id: int,
-    current_user_patient_id: int = Depends(deps.get_current_user_patient_id),
-) -> Any:
-    """
-    Get procedure by ID with related information - only allows access to user's own procedures.
-    """
-    procedure_obj = procedure.get_with_relations(
-        db=db, record_id=procedure_id, relations=["patient", "practitioner", "condition"]
-    )
-    handle_not_found(procedure_obj, "Procedure")
-    verify_patient_ownership(procedure_obj, current_user_patient_id, "procedure")
-    return procedure_obj
-
 
 @router.get("/scheduled", response_model=List[ProcedureResponse])
 def get_scheduled_procedures(
@@ -91,11 +61,23 @@ def get_scheduled_procedures(
     patient_id: Optional[int] = Query(None),
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """
-    Get all scheduled procedures, optionally filtered by patient.
-    """
+    """Get procedures that are scheduled.""" 
     procedures = procedure.get_scheduled(db, patient_id=patient_id)
     return procedures
+
+
+# Add standard CRUD endpoints AFTER custom endpoints to avoid conflicts
+# The GET /{entity_id} will include practitioner and condition relations per response schema
+add_standard_endpoints(
+    router,
+    crud_obj=procedure,
+    entity_type=EntityType.PROCEDURE,
+    entity_name="Procedure",
+    create_schema=ProcedureCreate,
+    update_schema=ProcedureUpdate,
+    response_schema=ProcedureResponse,
+    response_with_relations_schema=ProcedureWithRelations,
+)
 
 
 @router.get("/patient/{patient_id}/recent", response_model=List[ProcedureResponse])

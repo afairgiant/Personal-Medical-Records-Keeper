@@ -76,7 +76,7 @@ class ImmunizationBase(BaseModel):
 
 
 class ImmunizationCreate(ImmunizationBase):
-    pass
+    patient_id: int
 
 
 class ImmunizationUpdate(BaseModel):

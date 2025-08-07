@@ -1143,8 +1143,12 @@ class ApiService {
   getLabResultConditions(labResultId, signal) {
     return this.get(`/lab-results/${labResultId}/conditions`, { signal });
   }
-  createLabResultCondition(labResultId, conditionData, signal) {
-    return this.post(`/lab-results/${labResultId}/conditions`, conditionData, {
+  createLabResultCondition(labResultId, conditionData, signal, patientId = null) {
+    let url = `/lab-results/${labResultId}/conditions`;
+    if (patientId !== null) {
+      url += `?patient_id=${patientId}`;
+    }
+    return this.post(url, conditionData, {
       signal,
     });
   }
@@ -1242,7 +1246,7 @@ class ApiService {
       throw new Error('Member ID is required');
     }
 
-    return this.post(`/insurances/`, cleanPayload, { signal });
+    return this.createEntity(ENTITY_TYPES.INSURANCE, cleanPayload, signal);
   }
   updateInsurance(insuranceId, insuranceData, signal) {
     logger.debug('api_update_insurance', 'Updating insurance via API', {

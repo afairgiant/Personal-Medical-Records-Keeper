@@ -45,8 +45,8 @@ import ViewToggle from '../../components/shared/ViewToggle';
 import {
   ConditionCard,
   ConditionViewModal,
-  ConditionFormWrapper,
 } from '../../components/medical/conditions';
+import MantineConditionForm from '../../components/medical/MantineConditionForm';
 
 const Conditions = () => {
   const navigate = useNavigate();
@@ -360,7 +360,7 @@ const Conditions = () => {
         />
 
         {/* Form Modal */}
-        <ConditionFormWrapper
+        <MantineConditionForm
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={editingCondition ? 'Edit Condition' : 'Add New Condition'}
@@ -369,7 +369,6 @@ const Conditions = () => {
           onSubmit={handleSubmit}
           editingCondition={editingCondition}
           medications={medications}
-          practitioners={practitioners}
           navigate={navigate}
         />
 

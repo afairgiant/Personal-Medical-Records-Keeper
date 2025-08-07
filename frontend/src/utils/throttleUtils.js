@@ -41,26 +41,6 @@ export function createSafeThrottle(func, delay, options = {}) {
     
     lastArgs = args;
 
-    // Helper function to safely execute the original function
-    const safeExecute = () => {
-      if (isDestroyed) return;
-      
-      try {
-        lastCallTime = Date.now();
-        return func.apply(this, lastArgs);
-      } catch (error) {
-        if (onError) {
-          try {
-            onError(error, debugName, lastArgs);
-          } catch (handlerError) {
-            console.error(`Error in throttle error handler for ${debugName}:`, handlerError);
-          }
-        } else {
-          console.error(`Error in throttled function ${debugName}:`, error);
-        }
-      }
-    };
-
     // If enough time has passed, execute immediately (leading edge)
     if (leading && timeSinceLastCall >= delay) {
       if (timeoutId) {
@@ -95,6 +75,26 @@ export function createSafeThrottle(func, delay, options = {}) {
   // Add method to check if throttle is active
   throttledFunction.isPending = () => timeoutId !== null;
   
+  // Helper function to safely execute the original function (moved to outer scope)
+  const safeExecute = () => {
+    if (isDestroyed) return;
+    
+    try {
+      lastCallTime = Date.now();
+      return func.apply(this, lastArgs);
+    } catch (error) {
+      if (onError) {
+        try {
+          onError(error, debugName, lastArgs);
+        } catch (handlerError) {
+          console.error(`Error in throttle error handler for ${debugName}:`, handlerError);
+        }
+      } else {
+        console.error(`Error in throttled function ${debugName}:`, error);
+      }
+    }
+  };
+
   // Add method to flush pending execution
   throttledFunction.flush = () => {
     if (timeoutId && !isDestroyed) {

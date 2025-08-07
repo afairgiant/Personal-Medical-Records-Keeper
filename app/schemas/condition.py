@@ -11,6 +11,9 @@ class ConditionBase(BaseModel):
     diagnosis: str = Field(
         ..., min_length=2, max_length=500, description="Medical diagnosis"
     )
+    condition_name: Optional[str] = Field(
+        None, max_length=200, description="Optional alternative name for the condition"
+    )
     notes: Optional[str] = Field(
         None, max_length=1000, description="Additional notes about the condition"
     )
@@ -83,6 +86,9 @@ class ConditionCreate(ConditionBase):
 
 class ConditionUpdate(BaseModel):
     diagnosis: Optional[str] = Field(None, min_length=2, max_length=500)
+    condition_name: Optional[str] = Field(
+        None, max_length=200, description="Optional alternative name for the condition"
+    )
     notes: Optional[str] = Field(None, max_length=1000)
     onset_date: Optional[date] = None
     end_date: Optional[date] = None

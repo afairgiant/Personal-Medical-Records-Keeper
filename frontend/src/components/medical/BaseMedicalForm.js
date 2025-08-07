@@ -240,14 +240,15 @@ const BaseMedicalForm = ({
         return (
           <DateInput
             {...baseProps}
-            value={formData[name] ? (() => {
+            value={formData[name] && formData[name].trim() !== '' ? (() => {
               if (typeof formData[name] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(formData[name].trim())) {
                 const [year, month, day] = formData[name].trim().split('-').map(Number);
                 if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
                   return new Date(year, month - 1, day); // month is 0-indexed
                 }
               }
-              return new Date(formData[name]);
+              const dateObj = new Date(formData[name]);
+              return isNaN(dateObj.getTime()) ? null : dateObj;
             })() : null}
             onChange={handleDateChange(name)}
             firstDayOfWeek={0}

@@ -12,7 +12,7 @@ import {
   Grid,
   Badge,
 } from '@mantine/core';
-import DocumentManagerWithProgress from '../../shared/DocumentManagerWithProgress';
+import DocumentSection from '../../shared/DocumentSection';
 import { formatDate } from '../../../utils/helpers';
 import { navigateToEntity } from '../../../utils/linkNavigation';
 import logger from '../../../services/logger';
@@ -365,27 +365,13 @@ const VisitViewModal = ({
           </Card>
 
           {/* Document Management Section */}
-          <Card withBorder p="md">
-            <Stack gap="sm">
-              <Text fw={600} size="sm" c="dimmed">
-                ATTACHED DOCUMENTS
-              </Text>
-              <Divider />
-              <DocumentManagerWithProgress
-                entityType="visit"
-                entityId={visit.id}
-                mode="view"
-                config={{
-                  acceptedTypes: ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'],
-                  maxSize: 10 * 1024 * 1024, // 10MB
-                  maxFiles: 10
-                }}
-                onUploadComplete={handleDocumentUploadComplete}
-                onError={handleDocumentError}
-                showProgressModal={true}
-              />
-            </Stack>
-          </Card>
+          <DocumentSection
+            entityType="visit"
+            entityId={visit.id}
+            mode="view"
+            onUploadComplete={handleDocumentUploadComplete}
+            onError={handleDocumentError}
+          />
 
           {/* Action Buttons */}
           <Group justify="flex-end" mt="md">

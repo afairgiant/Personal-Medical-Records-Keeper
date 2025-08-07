@@ -1,22 +1,138 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Stack,
   Alert,
-  Modal,
-  Group,
-  Button,
-  FileInput,
-  TextInput,
 } from '@mantine/core';
 import {
-  IconUpload,
   IconAlertTriangle,
 } from '@tabler/icons-react';
 import useDocumentManagerCore from './DocumentManagerCore';
 import ProgressTracking from './ProgressTracking';
 import RenderModeContent from './RenderModeContent';
 import DocumentManagerErrorBoundary from './DocumentManagerErrorBoundary';
-import logger from '../../services/logger';
+
+
+// Inner component that can use hooks
+const DocumentManagerContent = React.memo(({
+  entityType,
+  entityId,
+  mode,
+  config,
+  onFileCountChange,
+  onError,
+  onUploadComplete,
+  onUploadPendingFiles,
+  onBlockingStateChange,
+  className,
+  showProgressModal,
+  progressProps
+}) => {
+  // Local state for modal
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [fileUpload, setFileUpload] = useState({ file: null, description: '' });
+
+  // Refs to store handlers for stable callback functions
+  const handlersRef = useRef(null);
+
+  // Get handlers from DocumentManagerCore hook with progress props from ProgressTracking
+  const coreHandlers = useDocumentManagerCore({
+    entityType,
+    entityId,
+    mode,
+    onFileCountChange,
+    onError,
+    onUploadComplete,
+    showProgressModal,
+    ...progressProps
+  });
+
+  // Performance optimization: Memoize form submission handler
+  const handleFileUploadSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!fileUpload.file || !handlersRef.current) return;
+
+    await handlersRef.current.handleImmediateUpload(fileUpload.file, fileUpload.description);
+    setFileUpload({ file: null, description: '' });
+    setShowUploadModal(false);
+  }, [fileUpload.file, fileUpload.description]);
+
+  // Update handlers ref when they change
+  useEffect(() => {
+    if (handlersRef.current !== coreHandlers) {
+      handlersRef.current = coreHandlers;
+      
+      // Trigger parent callback update when handlers are ready
+      if (onUploadPendingFiles && coreHandlers) {
+        onUploadPendingFiles({
+          uploadPendingFiles: coreHandlers.uploadPendingFiles,
+          getPendingFilesCount: coreHandlers.getPendingFilesCount,
+          hasPendingFiles: coreHandlers.hasPendingFiles,
+          clearPendingFiles: coreHandlers.clearPendingFiles,
+        });
+      }
+    }
+  }, [coreHandlers, onUploadPendingFiles]);
+
+  // Track blocking state from progress props and notify parent
+  useEffect(() => {
+    if (onBlockingStateChange && progressProps.uploadState) {
+      const isBlocking = !progressProps.uploadState.canClose;
+      onBlockingStateChange(isBlocking);
+    }
+  }, [progressProps.uploadState?.canClose, onBlockingStateChange]);
+
+  return (
+    <Stack gap="md" className={className}>
+      {/* Error Display */}
+      {coreHandlers.error && (
+        <Alert
+          variant="light"
+          color="red"
+          title="File Operation Error"
+          icon={<IconAlertTriangle size={16} />}
+          withCloseButton
+          onClose={() => coreHandlers.setError('')}
+        >
+          {coreHandlers.error}
+        </Alert>
+      )}
+
+      {/* Main Content */}
+      <DocumentManagerErrorBoundary
+        componentName="DocumentManager Content"
+        onError={onError}
+      >
+        <RenderModeContent
+          mode={mode}
+          loading={coreHandlers.loading}
+          files={coreHandlers.files}
+          paperlessLoading={coreHandlers.paperlessLoading}
+          selectedStorageBackend={coreHandlers.selectedStorageBackend}
+          onStorageBackendChange={coreHandlers.setSelectedStorageBackend}
+          paperlessSettings={coreHandlers.paperlessSettings}
+          syncStatus={coreHandlers.syncStatus}
+          syncLoading={coreHandlers.syncLoading}
+          pendingFiles={coreHandlers.pendingFiles}
+          filesToDelete={coreHandlers.filesToDelete}
+          config={config}
+          // Upload functionality - these are the expected prop names
+          onAddPendingFile={coreHandlers.handleAddPendingFile}
+          onRemovePendingFile={coreHandlers.handleRemovePendingFile}
+          onPendingFileDescriptionChange={coreHandlers.handlePendingFileDescriptionChange}
+          onUploadPendingFiles={coreHandlers.uploadPendingFiles}
+          onUploadModalOpen={setShowUploadModal}
+          onCheckSyncStatus={coreHandlers.handleCheckSyncStatus}
+          // File operations - these are the expected prop names  
+          onDownloadFile={coreHandlers.handleDownloadFile}
+          onViewFile={coreHandlers.handleViewFile}
+          onImmediateDelete={coreHandlers.handleImmediateDelete}
+          onMarkFileForDeletion={coreHandlers.handleMarkFileForDeletion}
+          onUnmarkFileForDeletion={coreHandlers.handleUnmarkFileForDeletion}
+        />
+      </DocumentManagerErrorBoundary>
+    </Stack>
+  );
+});
 
 
 const DocumentManagerWithProgress = React.memo(({
@@ -30,202 +146,41 @@ const DocumentManagerWithProgress = React.memo(({
   className = '',
   showProgressModal = true, // Whether to show the progress modal
   onUploadComplete, // Callback when upload completes
+  onBlockingStateChange, // Callback when blocking state changes
 }) => {
-  
-  // Local state for modal
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [fileUpload, setFileUpload] = useState({ file: null, description: '' });
-
-  // Refs to store handlers for stable callback functions
-  const handlersRef = useRef(null);
-
-  // Performance optimization: Memoize form submission handler
-  const handleFileUploadSubmit = useCallback(async (e) => {
-    e.preventDefault();
-    if (!fileUpload.file || !handlersRef.current) return;
-
-    await handlersRef.current.handleImmediateUpload(fileUpload.file, fileUpload.description);
-    setFileUpload({ file: null, description: '' });
-    setShowUploadModal(false);
-  }, [fileUpload.file, fileUpload.description]);
-
-  // Expose upload function to parent when handlers change
-  useEffect(() => {
-    if (onUploadPendingFiles && handlersRef.current) {
-      onUploadPendingFiles({
-        uploadPendingFiles: handlersRef.current.uploadPendingFiles,
-        getPendingFilesCount: handlersRef.current.getPendingFilesCount,
-        hasPendingFiles: handlersRef.current.hasPendingFiles,
-        clearPendingFiles: handlersRef.current.clearPendingFiles,
-      });
-    }
-  }, [onUploadPendingFiles]);
-
-  // Update handlers ref when they change - throttled to prevent excessive updates
-  const updateHandlersRef = useCallback((handlers) => {
-    // Only update if handlers actually changed to prevent unnecessary re-renders
-    if (handlersRef.current !== handlers) {
-      handlersRef.current = handlers;
-      
-      // Trigger parent callback update when handlers are ready (debounced)
-      if (onUploadPendingFiles && handlers) {
-        // Use setTimeout to debounce the callback update
-        setTimeout(() => {
-          onUploadPendingFiles({
-            uploadPendingFiles: handlers.uploadPendingFiles,
-            getPendingFilesCount: handlers.getPendingFilesCount,
-            hasPendingFiles: handlers.hasPendingFiles,
-            clearPendingFiles: handlers.clearPendingFiles,
-          });
-        }, 50); // 50ms debounce
-      }
-    }
-  }, [onUploadPendingFiles]);
-
   return (
     <ProgressTracking
       showProgressModal={showProgressModal}
       onUploadComplete={onUploadComplete}
     >
-      {(progressProps) => {
-        // Get handlers from DocumentManagerCore hook
-        const coreHandlers = useDocumentManagerCore({
-          entityType,
-          entityId,
-          mode,
-          onFileCountChange,
-          onError,
-          onUploadComplete,
-          showProgressModal,
-          ...progressProps
-        });
-
-        // Store handlers in ref for stable access
-        updateHandlersRef(coreHandlers);
-
-        return (
-          <Stack gap="md" className={className}>
-            {/* Error Display */}
-            {coreHandlers.error && (
-              <Alert
-                variant="light"
-                color="red"
-                title="File Operation Error"
-                icon={<IconAlertTriangle size={16} />}
-                withCloseButton
-                onClose={() => coreHandlers.setError('')}
-              >
-                {coreHandlers.error}
-              </Alert>
-            )}
-
-            {/* Main Content */}
-            <DocumentManagerErrorBoundary
-              componentName="DocumentManager Content"
-              onError={onError}
-            >
-              <RenderModeContent
-                mode={mode}
-                loading={coreHandlers.loading}
-                files={coreHandlers.files}
-                paperlessLoading={coreHandlers.paperlessLoading}
-                selectedStorageBackend={coreHandlers.selectedStorageBackend}
-                onStorageBackendChange={coreHandlers.setSelectedStorageBackend}
-                paperlessSettings={coreHandlers.paperlessSettings}
-                syncStatus={coreHandlers.syncStatus}
-                syncLoading={coreHandlers.syncLoading}
-                pendingFiles={coreHandlers.pendingFiles}
-                filesToDelete={coreHandlers.filesToDelete}
-                config={config}
-                onUploadModalOpen={() => setShowUploadModal(true)}
-                onCheckSyncStatus={coreHandlers.handleCheckSyncStatus}
-                onDownloadFile={coreHandlers.handleDownloadFile}
-                onViewFile={coreHandlers.handleViewFile}
-                onImmediateDelete={coreHandlers.handleImmediateDelete}
-                onMarkFileForDeletion={coreHandlers.handleMarkFileForDeletion}
-                onUnmarkFileForDeletion={coreHandlers.handleUnmarkFileForDeletion}
-                onAddPendingFile={coreHandlers.handleAddPendingFile}
-                onRemovePendingFile={coreHandlers.handleRemovePendingFile}
-                onPendingFileDescriptionChange={coreHandlers.handlePendingFileDescriptionChange}
-              />
-            </DocumentManagerErrorBoundary>
-
-                {/* Upload Modal for View Mode */}
-                <Modal
-                  opened={showUploadModal}
-                  onClose={() => {
-                    setShowUploadModal(false);
-                    setFileUpload({ file: null, description: '' });
-                  }}
-                  title="Upload File"
-                  centered
-                >
-                  <form onSubmit={handleFileUploadSubmit}>
-                    <Stack gap="md">
-                      <FileInput
-                        placeholder="Select a file to upload"
-                        value={fileUpload.file}
-                        onChange={file => setFileUpload(prev => ({ ...prev, file }))}
-                        accept={config.acceptedTypes?.join(',')}
-                        leftSection={<IconUpload size={16} />}
-                      />
-                      <TextInput
-                        placeholder="File description (optional)"
-                        value={fileUpload.description}
-                        onChange={e =>
-                          setFileUpload(prev => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                      />
-                      <Group justify="flex-end">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setShowUploadModal(false);
-                            setFileUpload({ file: null, description: '' });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          disabled={!fileUpload.file || coreHandlers.loading}
-                          leftSection={<IconUpload size={16} />}
-                        >
-                          Upload
-                        </Button>
-                      </Group>
-                    </Stack>
-                  </form>
-                </Modal>
-              </Stack>
-            );
-        }}
-      </ProgressTracking>
+      {(progressProps) => (
+        <DocumentManagerContent
+          entityType={entityType}
+          entityId={entityId}
+          mode={mode}
+          config={config}
+          onFileCountChange={onFileCountChange}
+          onError={onError}
+          onUploadComplete={onUploadComplete}
+          onUploadPendingFiles={onUploadPendingFiles}
+          onBlockingStateChange={onBlockingStateChange}
+          className={className}
+          showProgressModal={showProgressModal}
+          progressProps={progressProps}
+        />
+      )}
+    </ProgressTracking>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison to prevent unnecessary re-renders
-  const criticalProps = [
-    'entityType',
-    'entityId',
-    'mode',
-    'showProgressModal',
-  ];
-  
-  for (const prop of criticalProps) {
-    if (prevProps[prop] !== nextProps[prop]) {
-      return false; // Re-render
-    }
-  }
-  
-  // Shallow comparison for config object
-  if (JSON.stringify(prevProps.config) !== JSON.stringify(nextProps.config)) {
-    return false;
-  }
-  
-  return true; // Skip re-render
+  // Only re-render if essential props change
+  return (
+    prevProps.entityType === nextProps.entityType &&
+    prevProps.entityId === nextProps.entityId &&
+    prevProps.mode === nextProps.mode &&
+    prevProps.showProgressModal === nextProps.showProgressModal &&
+    prevProps.onUploadComplete === nextProps.onUploadComplete &&
+    JSON.stringify(prevProps.config) === JSON.stringify(nextProps.config)
+  );
 });
 
 export default DocumentManagerWithProgress;

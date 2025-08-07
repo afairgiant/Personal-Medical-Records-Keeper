@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.medication import medication
 from app.models.activity_log import EntityType
@@ -22,33 +23,9 @@ from app.schemas.medication import (
 
 router = APIRouter()
 
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
 
-# Add standard CREATE endpoint
-@router.post("/", response_model=MedicationResponseWithNested)
-def create_medication(
-    *,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    obj_in: MedicationCreate,
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Create new medication record."""
-    medication_obj = handle_create_with_logging(
-        db=db, crud_obj=medication, obj_in=obj_in,
-        entity_type=EntityType.MEDICATION, user_id=current_user_id,
-        entity_name="Medication", request=request
-    )
-    
-    # Return with relationships loaded
-    medication_id = getattr(medication_obj, "id", None)
-    if medication_id:
-        return medication.get_with_relations(
-            db=db, record_id=medication_id, relations=["practitioner", "pharmacy", "condition"]
-        )
-    return medication_obj
-
-
-# Custom LIST endpoint with filtering (preserve original behavior)
+# Custom LIST endpoint with name filtering (preserve original behavior)
 @router.get("/", response_model=List[MedicationResponseWithNested])
 def read_medications(
     db: Session = Depends(deps.get_db),
@@ -80,8 +57,7 @@ def read_medications(
 
     return medications
 
-
-# Custom GET by ID endpoint (preserve medication relations)
+# Custom GET by ID with relations loaded
 @router.get("/{medication_id}", response_model=MedicationResponseWithNested)
 def read_medication(
     *,
@@ -100,8 +76,31 @@ def read_medication(
     verify_patient_ownership(medication_obj, current_user_patient_id, "medication")
     return medication_obj
 
+# Custom CREATE with relations loaded
+@router.post("/", response_model=MedicationResponseWithNested)
+def create_medication(
+    *,
+    request: Request,
+    db: Session = Depends(deps.get_db),
+    obj_in: MedicationCreate,
+    current_user_id: int = Depends(deps.get_current_user_id),
+) -> Any:
+    """Create new medication record with relations loaded."""
+    medication_obj = handle_create_with_logging(
+        db=db, crud_obj=medication, obj_in=obj_in,
+        entity_type=EntityType.MEDICATION, user_id=current_user_id,
+        entity_name="Medication", request=request
+    )
+    
+    # Return with relationships loaded
+    medication_id = getattr(medication_obj, "id", None)
+    if medication_id:
+        return medication.get_with_relations(
+            db=db, record_id=medication_id, relations=["practitioner", "pharmacy", "condition"]
+        )
+    return medication_obj
 
-# Add standard UPDATE endpoint
+# Custom UPDATE with relations loaded  
 @router.put("/{medication_id}", response_model=MedicationResponseWithNested)
 def update_medication(
     *,
@@ -111,7 +110,7 @@ def update_medication(
     obj_in: MedicationUpdate,
     current_user_id: int = Depends(deps.get_current_user_id),
 ) -> Any:
-    """Update a medication record."""
+    """Update a medication record with relations loaded."""
     updated_medication = handle_update_with_logging(
         db=db, crud_obj=medication, entity_id=medication_id, obj_in=obj_in,
         entity_type=EntityType.MEDICATION, user_id=current_user_id,
@@ -123,8 +122,7 @@ def update_medication(
         db=db, record_id=medication_id, relations=["practitioner", "pharmacy", "condition"]
     )
 
-
-# Add standard DELETE endpoint
+# Custom DELETE endpoint
 @router.delete("/{medication_id}")
 def delete_medication(
     *,
@@ -139,6 +137,9 @@ def delete_medication(
         entity_type=EntityType.MEDICATION, user_id=current_user_id,
         entity_name="Medication", request=request
     )
+
+# NOTE: Medication endpoints require custom CRUD to load relationships (practitioner, pharmacy, condition)
+# Cannot use add_standard_endpoints() due to need for relation loading in responses
 
 
 # Custom patient medications endpoint with active_only filter

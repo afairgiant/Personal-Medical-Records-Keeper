@@ -10,6 +10,7 @@ from app.api.v1.endpoints.utils import (
     handle_not_found,
     handle_update_with_logging,
     verify_patient_ownership,
+    add_standard_endpoints,
 )
 from app.crud.family_member import family_member
 from app.crud.family_condition import family_condition
@@ -29,27 +30,9 @@ from app.schemas.family_condition import (
 
 router = APIRouter()
 
+# Custom endpoints defined BEFORE standard CRUD to avoid path conflicts
 
-@router.post("/", response_model=FamilyMemberResponse)
-def create_family_member(
-    *,
-    family_member_in: FamilyMemberCreate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-) -> Any:
-    """Create new family member."""
-    return handle_create_with_logging(
-        db=db,
-        crud_obj=family_member,
-        obj_in=family_member_in,
-        entity_type=EntityType.FAMILY_MEMBER,
-        user_id=current_user_id,
-        entity_name="Family Member",
-        request=request,
-    )
-
-
+# Custom LIST endpoint with relationship filtering
 @router.get("/", response_model=List[FamilyMemberResponse])
 def read_family_members(
     *,
@@ -71,7 +54,7 @@ def read_family_members(
         )
     return family_members
 
-
+# Dropdown endpoint (before standard endpoints)
 @router.get("/dropdown", response_model=List[FamilyMemberDropdownOption])
 def get_family_members_for_dropdown(
     *,
@@ -83,78 +66,7 @@ def get_family_members_for_dropdown(
     return family_members
 
 
-@router.get("/{family_member_id}", response_model=FamilyMemberResponse)
-def read_family_member(
-    *,
-    db: Session = Depends(deps.get_db),
-    family_member_id: int,
-    target_patient_id: int = Depends(deps.get_accessible_patient_id),
-) -> Any:
-    """Get family member by ID with conditions - supports patient switching."""
-    family_member_obj = family_member.get_with_relations(
-        db=db,
-        record_id=family_member_id,
-        relations=["family_conditions"],
-    )
-    handle_not_found(family_member_obj, "Family Member")
-    verify_patient_ownership(family_member_obj, target_patient_id, "family_member")
-    return family_member_obj
-
-
-@router.put("/{family_member_id}", response_model=FamilyMemberResponse)
-def update_family_member(
-    *,
-    family_member_id: int,
-    family_member_in: FamilyMemberUpdate,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-    target_patient_id: int = Depends(deps.get_accessible_patient_id),
-) -> Any:
-    """Update a family member - supports patient switching."""
-    # Verify family member exists and belongs to the accessible patient
-    family_member_obj = family_member.get(db, id=family_member_id)
-    handle_not_found(family_member_obj, "Family Member")
-    verify_patient_ownership(family_member_obj, target_patient_id, "family_member")
-    
-    return handle_update_with_logging(
-        db=db,
-        crud_obj=family_member,
-        entity_id=family_member_id,
-        obj_in=family_member_in,
-        entity_type=EntityType.FAMILY_MEMBER,
-        user_id=current_user_id,
-        entity_name="Family Member",
-        request=request,
-    )
-
-
-@router.delete("/{family_member_id}")
-def delete_family_member(
-    *,
-    family_member_id: int,
-    request: Request,
-    db: Session = Depends(deps.get_db),
-    current_user_id: int = Depends(deps.get_current_user_id),
-    target_patient_id: int = Depends(deps.get_accessible_patient_id),
-) -> Any:
-    """Delete a family member - supports patient switching."""
-    # Verify family member exists and belongs to the accessible patient
-    family_member_obj = family_member.get(db, id=family_member_id)
-    handle_not_found(family_member_obj, "Family Member")
-    verify_patient_ownership(family_member_obj, target_patient_id, "family_member")
-    
-    return handle_delete_with_logging(
-        db=db,
-        crud_obj=family_member,
-        entity_id=family_member_id,
-        entity_type=EntityType.FAMILY_MEMBER,
-        user_id=current_user_id,
-        entity_name="Family Member",
-        request=request,
-    )
-
-
+# Search endpoint (before standard endpoints)
 @router.get("/search/", response_model=List[FamilyMemberResponse])
 def search_family_members(
     *,
@@ -168,6 +80,20 @@ def search_family_members(
     )
     return family_members
 
+
+# Add standard CRUD endpoints AFTER custom endpoints to avoid conflicts
+# This will create: POST /, GET /{entity_id}, PUT /{entity_id}, DELETE /{entity_id}
+# Standard endpoints work with patient switching through deps.get_accessible_patient_id
+add_standard_endpoints(
+    router,
+    crud_obj=family_member,
+    entity_type=EntityType.FAMILY_MEMBER,
+    entity_name="FamilyMember",
+    create_schema=FamilyMemberCreate,
+    update_schema=FamilyMemberUpdate,
+    response_schema=FamilyMemberResponse,
+    response_with_relations_schema=FamilyMemberResponse,  # No separate WithRelations schema
+)
 
 # Family Condition Endpoints
 

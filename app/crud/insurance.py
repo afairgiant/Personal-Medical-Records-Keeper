@@ -17,7 +17,7 @@ class CRUDInsurance(CRUDBase[Insurance, InsuranceCreate, InsuranceUpdate]):
     """
 
     def get_by_patient(
-        self, db: Session, *, patient_id: int
+        self, db: Session, *, patient_id: int, skip: int = 0, limit: int = 100
     ) -> List[Insurance]:
         """
         Get all insurance records for a specific patient.
@@ -25,6 +25,8 @@ class CRUDInsurance(CRUDBase[Insurance, InsuranceCreate, InsuranceUpdate]):
         Args:
             db: Database session
             patient_id: Patient ID to filter by
+            skip: Number of records to skip
+            limit: Maximum number of records to return
 
         Returns:
             List of insurance records for the patient
@@ -33,6 +35,8 @@ class CRUDInsurance(CRUDBase[Insurance, InsuranceCreate, InsuranceUpdate]):
             db=db,
             filters={"patient_id": patient_id},
             order_by="insurance_type",
+            skip=skip,
+            limit=limit,
         )
 
     def get_active_by_patient(
