@@ -311,8 +311,20 @@ const Medication = () => {
   }, [formData, currentPatient, editingMedication, setError, updateItem, createItem, resetForm, refreshData]);
 
 
-  // Get processed data from data management
-  const processedMedications = dataManagement.data;
+  // Get processed data from data management and add practitioner/pharmacy names
+  const processedMedications = useMemo(() => {
+    return dataManagement.data.map(medication => ({
+      ...medication,
+      // Add practitioner name for sorting
+      practitioner_name: medication.practitioner_id 
+        ? practitioners.find(p => p.id === medication.practitioner_id)?.name || ''
+        : '',
+      // Add pharmacy name for sorting  
+      pharmacy_name: medication.pharmacy_id
+        ? pharmacies.find(p => p.id === medication.pharmacy_id)?.name || ''
+        : ''
+    }));
+  }, [dataManagement.data, practitioners, pharmacies]);
 
   if (loading) {
     return (
